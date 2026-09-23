@@ -4,12 +4,12 @@ import React, { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { useAppPreferences } from "@/components/providers/AppPreferences";
 import {
   Mail,
   MailCheck,
   ExternalLink,
   LogIn,
-  GraduationCap,
   Sparkles,
   AlertCircle,
   Clock,
@@ -18,6 +18,7 @@ import {
 function VerifyEmailPendingContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
+  const { t } = useAppPreferences();
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center px-4 py-12">
@@ -33,21 +34,21 @@ function VerifyEmailPendingContent() {
         {/* Header */}
         <div className="space-y-2">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 text-xs font-semibold uppercase tracking-wider border border-indigo-500/20">
-            <Sparkles className="w-3.5 h-3.5" /> Almost There
+            <Sparkles className="w-3.5 h-3.5" /> {t("verifyAlmostThere")}
           </div>
           <h2 className="text-2xl font-bold tracking-tight text-white">
-            Verify Your Email Address
+            {t("verifyEmailTitle")}
           </h2>
           <p className="text-sm text-slate-400 max-w-md mx-auto leading-relaxed">
-            We have sent a verification link to{" "}
+            {t("verifyEmailMessage")}{" "}
             {email ? (
               <span className="font-semibold text-slate-100 underline decoration-indigo-500 underline-offset-4">
                 {email}
               </span>
             ) : (
-              "your email address"
+              t("yourEmailAddress")
             )}
-            . Please check your inbox to activate your account.
+            . {t("verifyEmailActivate")}
           </p>
         </div>
 
@@ -56,21 +57,19 @@ function VerifyEmailPendingContent() {
           <div className="flex items-start gap-2.5 text-xs text-slate-300">
             <Clock className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
             <span>
-              The verification link is valid for <strong>15 minutes</strong>.
+              {t("linkValidFor")} <strong>15 {t("minutes")}</strong>.
             </span>
           </div>
           <div className="flex items-start gap-2.5 text-xs text-slate-400">
             <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-            <span>
-              If you don&apos;t see the email, be sure to check your <strong>Spam</strong> or <strong>Junk</strong> folder.
-            </span>
+            <span>{t("checkSpam")}</span>
           </div>
         </div>
 
         {/* Quick Email Service Shortcuts */}
         <div className="pt-1">
           <div className="text-xs uppercase tracking-wider font-semibold text-slate-500 mb-3">
-            Open Email Provider
+            {t("openEmailProvider")}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <a
@@ -80,7 +79,7 @@ function VerifyEmailPendingContent() {
               className="flex items-center justify-center gap-2 p-3 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-xl text-xs font-medium text-slate-200 transition-colors"
             >
               <Mail className="w-4 h-4 text-red-400" />
-              Open Gmail
+              {t("openGmail")}
               <ExternalLink className="w-3 h-3 text-slate-500" />
             </a>
             <a
@@ -90,7 +89,7 @@ function VerifyEmailPendingContent() {
               className="flex items-center justify-center gap-2 p-3 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-xl text-xs font-medium text-slate-200 transition-colors"
             >
               <Mail className="w-4 h-4 text-sky-400" />
-              Open Outlook
+              {t("openOutlook")}
               <ExternalLink className="w-3 h-3 text-slate-500" />
             </a>
           </div>
@@ -105,13 +104,13 @@ function VerifyEmailPendingContent() {
               className="w-full"
               icon={<LogIn className="w-4 h-4" />}
             >
-              Back to Sign In
+              {t("backToSignIn")}
             </Button>
           </Link>
           <div className="text-xs text-slate-500">
-            Wrong email address?{" "}
+            {t("wrongEmail")}{" "}
             <Link href="/register" className="text-indigo-400 hover:underline">
-              Register with another email
+              {t("registerAnotherEmail")}
             </Link>
           </div>
         </div>

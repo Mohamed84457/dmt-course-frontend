@@ -7,7 +7,7 @@ import { Modal } from "../ui/Modal";
 import { Input } from "../ui/Input";
 import { Button } from "../ui/Button";
 import { useUIStore } from "@/store/useUIStore";
-import { Upload, FileText, CheckCircle2, Clock } from "lucide-react";
+import { useAppPreferences } from "@/components/providers/AppPreferences";
 
 interface AssignmentSubmissionModalProps {
   isOpen: boolean;
@@ -17,25 +17,22 @@ interface AssignmentSubmissionModalProps {
   onSuccess?: () => void;
 }
 
-export const AssignmentSubmissionModal: React.FC<AssignmentSubmissionModalProps> = ({
-  isOpen,
-  onClose,
-  assignment,
-  existingSubmission,
-  onSuccess,
-}) => {
+export const AssignmentSubmissionModal: React.FC<
+  AssignmentSubmissionModalProps
+> = ({ isOpen, onClose, assignment, existingSubmission, onSuccess }) => {
   const { addToast } = useUIStore();
+  const { t } = useAppPreferences();
   const [submissionText, setSubmissionText] = useState("");
   const [fileUrl, setFileUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!submissionText && !fileUrl) {
       addToast({
         type: "warning",
-        title: "Missing Content",
-        message: "Please provide submission text or a file link.",
+        title: t("missingContent"),
+        message: t("provideSubmission"),
       });
       return;
     }
@@ -49,8 +46,8 @@ export const AssignmentSubmissionModal: React.FC<AssignmentSubmissionModalProps>
 
       addToast({
         type: "success",
-        title: "Assignment Submitted",
-        message: "Your submission has been received by your instructor.",
+        title: t("assignmentSubmitted"),
+        message: t("submissionReceived"),
       });
 
       if (onSuccess) onSuccess();
@@ -58,7 +55,7 @@ export const AssignmentSubmissionModal: React.FC<AssignmentSubmissionModalProps>
     } catch (err: any) {
       addToast({
         type: "error",
-        title: "Submission Error",
+        title: t("submissionError"),
         message: err.response?.data?.message || "Failed to submit assignment",
       });
     } finally {
@@ -71,14 +68,14 @@ export const AssignmentSubmissionModal: React.FC<AssignmentSubmissionModalProps>
       isOpen={isOpen}
       onClose={onClose}
       title={assignment.title}
-      description={`Total Points: ${assignment.totalPoints}`}
+      description={`${t("totalPoints")}: ${assignment.totalPoints}`}
       maxWidth="lg"
     >
       <div className="space-y-6">
         {/* Assignment Prompt */}
         <div className="rounded-xl bg-slate-950/60 border border-slate-800 p-4">
           <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-400 mb-1">
-            Assignment Instructions
+            {t("assignmentInstructions")}
           </h4>
           <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
             {assignment.description}
@@ -90,7 +87,7 @@ export const AssignmentSubmissionModal: React.FC<AssignmentSubmissionModalProps>
           <div className="rounded-xl bg-indigo-950/20 border border-indigo-500/30 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase text-indigo-400">
-                Current Submission Status
+                {t("currentSubmissionStatus")}
               </span>
               <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 {existingSubmission.status}
@@ -99,7 +96,7 @@ export const AssignmentSubmissionModal: React.FC<AssignmentSubmissionModalProps>
 
             {existingSubmission.grade !== undefined && (
               <div className="text-sm">
-                <span className="text-slate-400">Grade: </span>
+                <span className="text-slate-400">{t("grade")}: </span>
                 <span className="font-bold text-white text-base">
                   {existingSubmission.grade} / {assignment.totalPoints}
                 </span>
@@ -108,7 +105,9 @@ export const AssignmentSubmissionModal: React.FC<AssignmentSubmissionModalProps>
 
             {existingSubmission.feedback && (
               <div className="text-xs text-slate-300 bg-slate-900 p-3 rounded-lg border border-slate-800">
-                <span className="font-semibold text-white block mb-1">Instructor Feedback:</span>
+                <span className="font-semibold text-white block mb-1">
+                  {t("instructorFeedback")}:
+                </span>
                 {existingSubmission.feedback}
               </div>
             )}
@@ -118,30 +117,40 @@ export const AssignmentSubmissionModal: React.FC<AssignmentSubmissionModalProps>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">
-                Your Answer / Notes
+                {t("yourAnswerNotes")}
               </label>
               <textarea
                 rows={4}
                 value={submissionText}
                 onChange={(e) => setSubmissionText(e.target.value)}
-                placeholder="Write your assignment solution, summary, or response here..."
+                placeholder={t("writeSolution")}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
             <Input
-              label="Document / Project Link (Optional)"
+              label={t("projectLink")}
               placeholder="https://github.com/username/project or Google Drive link"
               value={fileUrl}
               onChange={(e) => setFileUrl(e.target.value)}
             />
 
             <div className="flex justify-end gap-3 pt-2">
-              <Button type="button" variant="outline" size="sm" onClick={onClose}>
-                Cancel
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onClose}
+              >
+                {t("cancel")}
               </Button>
-              <Button type="submit" variant="primary" size="sm" isLoading={isSubmitting}>
-                Submit Assignment
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                isLoading={isSubmitting}
+              >
+                {t("submitAssignment")}
               </Button>
             </div>
           </form>

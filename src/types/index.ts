@@ -1,4 +1,10 @@
-export type UserRole = "owner" | "admin" | "manager" | "instructor" | "student" | "teacher";
+export type UserRole =
+  | "owner"
+  | "admin"
+  | "manager"
+  | "instructor"
+  | "student"
+  | "teacher";
 
 export interface User {
   _id: string;
@@ -30,6 +36,21 @@ export interface Organization {
   updatedAt?: string;
 }
 
+export interface RegistrationData {
+  name: string;
+  email: string;
+  password: string;
+  gender: "male" | "female";
+  role: UserRole[];
+  organizationId: string;
+  phone?: string;
+  educationLevel?: string;
+  school?: string;
+  address?: string;
+  parentName?: string;
+  parentPhone?: string;
+}
+
 export interface Category {
   _id: string;
   name: string;
@@ -45,7 +66,17 @@ export interface Course {
   title: string;
   description: string;
   category: string | Category;
-  teacherId: string | User | { _id?: string; employeeCode?: string; specialization?: string; userId?: User | string; name?: string; email?: string };
+  teacherId:
+    | string
+    | User
+    | {
+        _id?: string;
+        employeeCode?: string;
+        specialization?: string;
+        userId?: User | string;
+        name?: string;
+        email?: string;
+      };
   organizationId?: string | Organization;
   price: number;
   isPublished?: boolean;
@@ -85,7 +116,12 @@ export interface QuizQuestionOption {
 export interface QuizQuestion {
   _id?: string;
   questionText: string;
-  questionType?: "mcq" | "true_false" | "short_answer" | "multiple_choice" | "essay";
+  questionType?:
+    | "mcq"
+    | "true_false"
+    | "short_answer"
+    | "multiple_choice"
+    | "essay";
   options?: QuizQuestionOption[];
   points?: number;
   explanation?: string;
@@ -120,17 +156,19 @@ export interface QuizSubmissionAnswer {
   answerText?: string;
 }
 
+type EntityReference = string | User | Record<string, unknown>;
+
 export interface QuizSubmission {
   _id: string;
   quizId: string | Quiz;
-  studentId: string | User | any;
+  studentId: EntityReference;
   answers: QuizSubmissionAnswer[];
   totalScore?: number;
   score?: number;
   bonusPoints?: number;
   isPassed?: boolean;
   passed?: boolean;
-  status?: "graded" | "pending_manual_grading" | "submitted" | "pending" | string;
+  status?: string;
   createdAt?: string;
   submittedAt?: string;
 }
@@ -152,21 +190,22 @@ export interface Assignment {
 export interface AssignmentSubmission {
   _id: string;
   assignmentId: string | Assignment;
-  studentId: string | User | any;
+  studentId: EntityReference;
+  courseId?: string | Course;
   submissionText?: string;
   fileUrl?: string;
   grade?: number;
   feedback?: string;
-  status?: "submitted" | "graded" | "late" | string;
+  status?: string;
   createdAt?: string;
 }
 
 export interface Enrollment {
   _id: string;
-  studentId: string | User | any;
-  courseId: string | Course | any;
-  status: "active" | "cancelled" | "completed" | "pending" | "dropped" | string;
-  paymentStatus: "paid" | "pending" | "failed" | "refunded" | "free" | "unpaid" | string;
+  studentId: EntityReference;
+  courseId: string | Course;
+  status: string;
+  paymentStatus: string;
   progressPercentage?: number;
   progress?: number;
   completedLessons?: string[];

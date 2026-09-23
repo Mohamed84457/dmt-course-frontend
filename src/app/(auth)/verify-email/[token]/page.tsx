@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useUIStore } from "@/store/useUIStore";
 import { Button } from "@/components/ui/Button";
+import { useAppPreferences } from "@/components/providers/AppPreferences";
 import {
   CheckCircle2,
   XCircle,
@@ -22,11 +23,14 @@ export default function VerifyEmailTokenPage() {
   const router = useRouter();
   const { verifyEmail } = useAuthStore();
   const { addToast } = useUIStore();
+  const { t } = useAppPreferences();
 
   const rawToken = params?.token;
   const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
 
-  const [status, setStatus] = useState<"verifying" | "success" | "error">("verifying");
+  const [status, setStatus] = useState<"verifying" | "success" | "error">(
+    "verifying",
+  );
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [countdown, setCountdown] = useState<number>(5);
 
@@ -35,7 +39,7 @@ export default function VerifyEmailTokenPage() {
   const handleVerify = async () => {
     if (!token) {
       setStatus("error");
-      setErrorMessage("No verification token found in URL.");
+      setErrorMessage(t("noVerificationToken"));
       return;
     }
 
@@ -47,14 +51,12 @@ export default function VerifyEmailTokenPage() {
       setStatus("success");
       addToast({
         type: "success",
-        title: "Email Verified!",
-        message: response?.message || "Your email has been successfully verified.",
+        title: t("emailVerified"),
+        message: response?.message || t("emailVerifiedMessage"),
       });
     } catch (err: any) {
       setStatus("error");
-      setErrorMessage(
-        err.message || "Email verification failed. The link might be invalid or expired."
-      );
+      setErrorMessage(err.message || t("verificationFailed"));
     }
   };
 
@@ -83,7 +85,7 @@ export default function VerifyEmailTokenPage() {
         <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
 
         {/* Brand Logo */}
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-500 text-white mb-6 shadow-lg shadow-indigo-500/25">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-tr from-indigo-600 to-purple-500 text-white mb-6 shadow-lg shadow-indigo-500/25">
           <GraduationCap className="h-7 w-7" />
         </div>
 
@@ -97,10 +99,10 @@ export default function VerifyEmailTokenPage() {
 
             <div>
               <h2 className="text-2xl font-bold tracking-tight text-white">
-                Verifying Your Email
+                {t("verifyingEmail")}
               </h2>
               <p className="text-sm text-slate-400 mt-2">
-                Please wait a moment while we validate your activation link...
+                {t("validatingLink")}
               </p>
             </div>
           </div>
@@ -115,18 +117,22 @@ export default function VerifyEmailTokenPage() {
 
             <div>
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-2 border border-emerald-500/20">
-                <ShieldCheck className="w-3.5 h-3.5" /> Account Activated
+                <ShieldCheck className="w-3.5 h-3.5" /> {t("accountActivated")}
               </div>
               <h2 className="text-2xl font-bold tracking-tight text-white">
-                Email Verified Successfully!
+                {t("verifiedSuccessfully")}
               </h2>
               <p className="text-sm text-slate-300 mt-2 leading-relaxed">
-                Your email address has been confirmed and your student account is now fully active.
+                {t("accountActiveMessage")}
               </p>
             </div>
 
             <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 text-xs text-slate-400">
-              Redirecting to login in <span className="font-semibold text-indigo-400">{countdown}s</span>...
+              {t("redirectingLogin")}{" "}
+              <span className="font-semibold text-indigo-400">
+                {countdown}s
+              </span>
+              ...
             </div>
 
             <div className="pt-2">
@@ -137,7 +143,7 @@ export default function VerifyEmailTokenPage() {
                 onClick={() => router.push("/login")}
                 icon={<LogIn className="w-4 h-4" />}
               >
-                Sign In to Your Account <ArrowRight className="w-4 h-4 ml-1" />
+                {t("signIn")} <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
           </div>
@@ -152,14 +158,12 @@ export default function VerifyEmailTokenPage() {
 
             <div>
               <h2 className="text-2xl font-bold tracking-tight text-white">
-                Verification Failed
+                {t("verificationFailedTitle")}
               </h2>
               <p className="text-sm text-rose-300 mt-2 bg-rose-500/10 border border-rose-500/20 p-3 rounded-xl leading-relaxed">
                 {errorMessage}
               </p>
-              <p className="text-xs text-slate-400 mt-3">
-                Verification links expire after 15 minutes. If your link has expired, you can log in or register again to get a new one.
-              </p>
+              <p className="text-xs text-slate-400 mt-3">{t("linksExpire")}</p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -170,7 +174,7 @@ export default function VerifyEmailTokenPage() {
                 onClick={handleVerify}
                 icon={<RefreshCw className="w-4 h-4" />}
               >
-                Retry
+                {t("retry")}
               </Button>
               <Button
                 variant="primary"
@@ -185,7 +189,10 @@ export default function VerifyEmailTokenPage() {
 
             <div className="text-xs text-slate-500 pt-2">
               Need assistance?{" "}
-              <Link href="/register" className="text-indigo-400 hover:underline">
+              <Link
+                href="/register"
+                className="text-indigo-400 hover:underline"
+              >
                 Create new account
               </Link>
             </div>

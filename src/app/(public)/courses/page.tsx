@@ -4,10 +4,13 @@ import React, { useEffect, useState } from "react";
 import { useCourseStore } from "@/store/useCourseStore";
 import { CourseCard } from "@/components/courses/CourseCard";
 import { Input } from "@/components/ui/Input";
-import { Search, Filter, BookOpen } from "lucide-react";
+import { Search, BookOpen } from "lucide-react";
+import { useAppPreferences } from "@/components/providers/AppPreferences";
 
 export default function CoursesPage() {
-  const { courses, categories, fetchCourses, fetchCategories } = useCourseStore();
+  const { courses, categories, fetchCourses, fetchCategories } =
+    useCourseStore();
+  const { t } = useAppPreferences();
   const [search, setSearch] = useState("");
   const [selectedCat, setSelectedCat] = useState<string>("all");
 
@@ -32,12 +35,12 @@ export default function CoursesPage() {
       {/* Header */}
       <div className="max-w-3xl mb-10">
         <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">
-          Knowledge Base
+          {t("knowledgeBase")}
         </span>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-white mt-1">Course Catalog</h1>
-        <p className="text-sm text-slate-400 mt-2">
-          Discover industry-vetted courses taught by verified instructors across technology, business, and science.
-        </p>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-white mt-1">
+          {t("courseCatalog")}
+        </h1>
+        <p className="text-sm text-slate-400 mt-2">{t("discoverCourses")}</p>
       </div>
 
       {/* Filter Controls Bar */}
@@ -45,7 +48,7 @@ export default function CoursesPage() {
         {/* Search */}
         <div className="w-full md:w-80">
           <Input
-            placeholder="Search course title or topic..."
+            placeholder={t("searchCourseTopic")}
             icon={<Search className="w-4 h-4" />}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -62,7 +65,7 @@ export default function CoursesPage() {
                 : "bg-slate-950 text-slate-400 border border-slate-800 hover:text-white"
             }`}
           >
-            All Courses
+            {t("allCourses")}
           </button>
           {categories.map((cat) => (
             <button
@@ -84,9 +87,11 @@ export default function CoursesPage() {
       {filteredCourses.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-80 rounded-3xl bg-slate-900/40 border border-slate-800/80 text-center p-8">
           <BookOpen className="w-12 h-12 text-slate-600 mb-3" />
-          <h3 className="text-lg font-bold text-slate-200">No courses match your criteria</h3>
+          <h3 className="text-lg font-bold text-slate-200">
+            {t("noCoursesMatch")}
+          </h3>
           <p className="text-xs text-slate-400 mt-1 max-w-sm">
-            Try adjusting your search query or selecting a different category filter.
+            {t("adjustSearch")}
           </p>
         </div>
       ) : (

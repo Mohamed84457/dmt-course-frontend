@@ -5,6 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useUIStore } from "@/store/useUIStore";
+import { api } from "@/lib/api";
+import { Organization } from "@/types";
+import { useAppPreferences } from "@/components/providers/AppPreferences";
+import { PreferenceControls } from "@/components/layout/PreferenceControls";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import {
@@ -14,16 +18,24 @@ import {
   User as UserIcon,
   Phone,
   UserCheck,
-  Building,
   MapPin,
   School,
-  BookOpen,
+  Building2,
 } from "lucide-react";
+
+type EducationLevel =
+  | "Primary"
+  | "Preparatory"
+  | "Secondary"
+  | "University"
+  | "Graduate"
+  | "Other";
 
 export default function RegisterPage() {
   const router = useRouter();
   const { register } = useAuthStore();
   const { addToast } = useUIStore();
+  const { t } = useAppPreferences();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -32,18 +44,47 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("");
 
   // Student specific required & optional fields
-  const [educationLevel, setEducationLevel] = useState<
-    "Primary" | "Preparatory" | "Secondary" | "University" | "Graduate" | "Other"
-  >("Primary");
+  const [educationLevel, setEducationLevel] =
+    useState<EducationLevel>("Primary");
   const [school, setSchool] = useState("");
   const [address, setAddress] = useState("");
   const [parentName, setParentName] = useState("");
   const [parentPhone, setParentPhone] = useState("");
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [organizationId, setOrganizationId] = useState("");
+  const [organizationsLoading, setOrganizationsLoading] = useState(true);
+  const [organizationsError, setOrganizationsError] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  React.useEffect(() => {
+    api
+      .get("/organization")
+      .then((res) => {
+        const list =
+          res.data?.organizations ||
+          res.data?.data ||
+          (Array.isArray(res.data) ? res.data : []);
+        setOrganizations(
+          list.filter(
+            (organization: Organization) => organization.isactive !== false,
+          ),
+        );
+      })
+      .catch(() => setOrganizationsError(true))
+      .finally(() => setOrganizationsLoading(false));
+  }, []);
+
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!organizationId) {
+      addToast({
+        type: "error",
+        title: t("chooseOrganization"),
+        message: t("chooseOrganization"),
+      });
+      return;
+    }
     setIsLoading(true);
     try {
       await register({
@@ -57,21 +98,22 @@ export default function RegisterPage() {
         address: address || undefined,
         parentName: parentName || undefined,
         parentPhone: parentPhone || undefined,
+        organizationId,
         role: ["student"],
       });
 
       addToast({
         type: "success",
-        title: "Registration Successful!",
-        message: "Please check your email to verify and activate your account.",
+        title: t("registrationSuccess"),
+        message: t("verifyInstruction"),
       });
 
       router.push(`/verify-email?email=${encodeURIComponent(email)}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       addToast({
         type: "error",
-        title: "Registration Failed",
-        message: err.message || "Could not register account",
+        title: t("registrationFailed"),
+        message: err instanceof Error ? err.message : t("registrationError"),
       });
     } finally {
       setIsLoading(false);
@@ -79,22 +121,73 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-xl space-y-8 bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl">
+    <div className="min-h-[85vh] px-4 py-6 sm:py-12">
+      <div className="mx-auto flex w-full max-w-xl justify-end">
+        <PreferenceControls />
+      </div>
+      <div className="mx-auto mt-4 w-full max-w-xl space-y-8 rounded-3xl border border-slate-800 bg-slate-900 p-5 shadow-2xl sm:p-8">
         <div className="text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-500 text-white mb-4 shadow-lg shadow-indigo-500/25">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-tr from-indigo-600 to-purple-500 text-white mb-4 shadow-lg shadow-indigo-500/25">
             <GraduationCap className="h-7 w-7" />
           </div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">Join EduSphere Today</h2>
-          <p className="text-xs text-slate-400 mt-1">Create your student profile and start learning</p>
+
+          <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4">
+            <div className="mb-3 flex items-start gap-3">
+              <Building2 className="mt-0.5 h-5 w-5 shrink-0 text-indigo-400" />
+              <div>
+                <h3 className="text-sm font-bold text-white">
+                  {t("chooseOrganization")}
+                </h3>
+                <p className="mt-1 text-xs text-slate-400">
+                  {t("organizationHint")}
+                </p>
+              </div>
+            </div>
+            <select
+              value={organizationId}
+              onChange={(e) => setOrganizationId(e.target.value)}
+              required
+              disabled={organizationsLoading || organizations.length === 0}
+              className="w-full rounded-xl border border-slate-800 bg-slate-950 p-3 text-sm text-slate-100 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">
+                {organizationsLoading
+                  ? t("loadingOrganizations")
+                  : t("chooseOrganization")}
+              </option>
+              {organizations.map((organization) => (
+                <option key={organization._id} value={organization._id}>
+                  {organization.name}
+                </option>
+              ))}
+            </select>
+            {organizationsError && (
+              <p className="mt-2 text-xs text-rose-400">
+                {t("loadOrganizationsError")}
+              </p>
+            )}
+            {!organizationsLoading &&
+              !organizationsError &&
+              organizations.length === 0 && (
+                <p className="mt-2 text-xs text-amber-400">
+                  {t("noOrganizations")}
+                </p>
+              )}
+          </div>
+          <h2 className="text-2xl font-bold tracking-tight text-white">
+            {t("registrationTitle")}
+          </h2>
+          <p className="text-xs text-slate-400 mt-1">
+            {t("registrationSubtitle")}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Account Basics */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="Full Name"
-              placeholder="e.g. Mohamed Eldamaty"
+              label={t("fullName")}
+              placeholder={t("fullName")}
               icon={<UserIcon className="w-4 h-4" />}
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -102,9 +195,9 @@ export default function RegisterPage() {
             />
 
             <Input
-              label="Email Address"
+              label={t("emailAddress")}
               type="email"
-              placeholder="john@example.com"
+              placeholder="student@example.com"
               icon={<Mail className="w-4 h-4" />}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -115,7 +208,7 @@ export default function RegisterPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Input
-                label="Password"
+                label={t("password")}
                 type="password"
                 placeholder="Min 8 chars, 1 Upper, 1 Special"
                 icon={<Lock className="w-4 h-4" />}
@@ -124,12 +217,12 @@ export default function RegisterPage() {
                 required
               />
               <span className="text-[10px] text-slate-500 block mt-1">
-                Must include Upper, Lower, Number & Symbol (e.g. Pass@123)
+                {t("passwordHint")}
               </span>
             </div>
 
             <Input
-              label="Personal Phone Number"
+              label={t("personalPhone")}
               placeholder="01012345678"
               icon={<Phone className="w-4 h-4" />}
               value={phone}
@@ -140,42 +233,52 @@ export default function RegisterPage() {
           {/* Educational Profile */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">
-                Education Level *
+              <label
+                htmlFor="education-level"
+                className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1"
+              >
+                {t("educationLevel")} *
               </label>
               <select
+                id="education-level"
                 value={educationLevel}
-                onChange={(e) => setEducationLevel(e.target.value as any)}
+                onChange={(e) =>
+                  setEducationLevel(e.target.value as EducationLevel)
+                }
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 required
               >
-                <option value="Primary">Primary</option>
-                <option value="Preparatory">Preparatory</option>
-                <option value="Secondary">Secondary</option>
-                <option value="University">University</option>
-                <option value="Graduate">Graduate</option>
-                <option value="Other">Other</option>
+                <option value="Primary">{t("primary")}</option>
+                <option value="Preparatory">{t("preparatory")}</option>
+                <option value="Secondary">{t("secondary")}</option>
+                <option value="University">{t("university")}</option>
+                <option value="Graduate">{t("graduate")}</option>
+                <option value="Other">{t("other")}</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">
-                Gender
+              <label
+                htmlFor="gender"
+                className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1"
+              >
+                {t("gender")}
               </label>
               <select
+                id="gender"
                 value={gender}
-                onChange={(e) => setGender(e.target.value as any)}
+                onChange={(e) => setGender(e.target.value as "male" | "female")}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
-                <option value="male">Male</option>
-                <option value="female">Female</option>
+                <option value="male">{t("male")}</option>
+                <option value="female">{t("female")}</option>
               </select>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="School / University"
+              label={t("school")}
               placeholder="e.g. Cairo Modern Academy"
               icon={<School className="w-4 h-4" />}
               value={school}
@@ -183,7 +286,7 @@ export default function RegisterPage() {
             />
 
             <Input
-              label="Address / City"
+              label={t("address")}
               placeholder="e.g. Nasr City, Cairo"
               icon={<MapPin className="w-4 h-4" />}
               value={address}
@@ -194,7 +297,7 @@ export default function RegisterPage() {
           {/* Guardian / Parent Information */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="Parent / Guardian Name"
+              label={t("parentName")}
               placeholder="e.g. Ahmed Eldamaty"
               icon={<UserCheck className="w-4 h-4" />}
               value={parentName}
@@ -202,7 +305,7 @@ export default function RegisterPage() {
             />
 
             <Input
-              label="Parent Phone Number"
+              label={t("parentPhone")}
               placeholder="01909090909"
               icon={<Phone className="w-4 h-4" />}
               value={parentPhone}
@@ -219,15 +322,18 @@ export default function RegisterPage() {
               isLoading={isLoading}
               icon={<UserCheck className="w-4 h-4" />}
             >
-              Create Student Account
+              {t("createStudentAccount")}
             </Button>
           </div>
         </form>
 
         <div className="text-center text-xs text-slate-400">
-          Already registered?{" "}
-          <Link href="/login" className="font-semibold text-indigo-400 hover:underline">
-            Sign in here
+          {t("alreadyRegistered")}{" "}
+          <Link
+            href="/login"
+            className="font-semibold text-indigo-400 hover:underline"
+          >
+            {t("signInHere")}
           </Link>
         </div>
       </div>

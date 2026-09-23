@@ -5,12 +5,19 @@ import Link from "next/link";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useNotificationStore } from "@/store/useNotificationStore";
-import { Enrollment, Payment, Organization, AssignmentSubmission, QuizSubmission } from "@/types";
+import {
+  Enrollment,
+  Payment,
+  Organization,
+  AssignmentSubmission,
+  QuizSubmission,
+} from "@/types";
 import { api } from "@/lib/api";
 import { CourseCard } from "@/components/courses/CourseCard";
 import { StatCard } from "@/components/ui/StatCard";
 import { Button } from "@/components/ui/Button";
 import { JoinOrganizationModal } from "@/components/organizations/JoinOrganizationModal";
+import { useAppPreferences } from "@/components/providers/AppPreferences";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   BookOpen,
@@ -19,105 +26,122 @@ import {
   Building2,
   KeyRound,
   PlayCircle,
-  ShieldCheck,
-  Plus,
   FileCheck,
-  CheckCircle2,
-  Clock,
   HelpCircle,
   Upload,
-  ExternalLink,
-  MessageSquare,
 } from "lucide-react";
 
 export default function StudentDashboardPage() {
-  const { user, fetchMe } = useAuthStore();
+  const { user } = useAuthStore();
   const { fetchNotifications } = useNotificationStore();
+  const { t } = useAppPreferences();
+  const organizationId =
+    typeof user?.organizationId === "string" ? user.organizationId : null;
 
   const [activeTab, setActiveTab] = useState<"courses" | "grades">("courses");
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [myAssignmentSubs, setMyAssignmentSubs] = useState<AssignmentSubmission[]>([]);
+  const [myAssignmentSubs, setMyAssignmentSubs] = useState<
+    AssignmentSubmission[]
+  >([]);
   const [myQuizSubs, setMyQuizSubs] = useState<QuizSubmission[]>([]);
-  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [fetchedOrganization, setFetchedOrganization] =
+    useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
 
   useEffect(() => {
     fetchNotifications();
-    setLoading(true);
+    let isMounted = true;
 
-    Promise.all([
-      api.get("/enrollments/my-enrollments").catch(() => ({ data: [] })),
-      user?._id
-        ? api.get(`/payments/student/${user._id}`).catch(() => ({ data: [] }))
-        : Promise.resolve({ data: [] }),
-      api.get("/submission-assignment/student/my-submissions").catch(() => ({ data: [] })),
-      api.get("/quiz-submissions/student/my-submissions").catch(() => ({ data: [] })),
-    ]).then(async ([enrollRes, payRes, subRes, qSubRes]) => {
-      const rawEnrollList =
-        enrollRes.data?.enrollments ||
-        enrollRes.data?.data ||
-        (Array.isArray(enrollRes.data) ? enrollRes.data : []);
-      const payList =
-        payRes.data?.payments ||
-        payRes.data?.data ||
-        (Array.isArray(payRes.data) ? payRes.data : []);
-      const assignSubs =
-        subRes.data?.submissions ||
-        subRes.data?.data ||
-        (Array.isArray(subRes.data) ? subRes.data : []);
-      const quizSubs =
-        qSubRes.data?.submissions ||
-        qSubRes.data?.data ||
-        (Array.isArray(qSubRes.data) ? qSubRes.data : []);
+    const loadDashboard = async () => {
+      try {
+        const [enrollResult, paymentResult, assignmentResult, quizResult] =
+          await Promise.allSettled([
+            api.get("/enrollments/my-enrollments"),
+            user?._id
+              ? api.get(`/payments/student/${user._id}`)
+              : Promise.resolve({ data: [] }),
+            api.get("/submission-assignment/student/my-submissions"),
+            api.get("/quiz-submissions/student/my-submissions"),
+          ]);
 
-      // Populate course object if courseId is string ID
-      const populatedEnrollments = await Promise.all(
-        rawEnrollList.map(async (enr: Enrollment) => {
-          if (typeof enr.courseId === "string") {
+        const getData = (result: PromiseSettledResult<{ data: unknown }>) =>
+          result.status === "fulfilled" ? result.value.data : [];
+        const getList = (payload: unknown, key: string): unknown[] => {
+          if (Array.isArray(payload)) return payload;
+          if (payload && typeof payload === "object") {
+            const value = (payload as Record<string, unknown>)[key];
+            if (Array.isArray(value)) return value;
+            const nested = (payload as Record<string, unknown>).data;
+            if (Array.isArray(nested)) return nested;
+          }
+          return [];
+        };
+        const enrollData = getData(enrollResult);
+        const paymentData = getData(paymentResult);
+        const assignmentData = getData(assignmentResult);
+        const quizData = getData(quizResult);
+
+        const rawEnrollList = getList(
+          enrollData,
+          "enrollments",
+        ) as Enrollment[];
+        const payList = getList(paymentData, "payments") as Payment[];
+        const assignSubs = getList(
+          assignmentData,
+          "submissions",
+        ) as AssignmentSubmission[];
+        const quizSubs = getList(quizData, "submissions") as QuizSubmission[];
+
+        const populatedEnrollments = await Promise.all(
+          rawEnrollList.map(async (enr) => {
+            if (typeof enr.courseId !== "string") return enr;
             try {
               const cRes = await api.get(`/courses/${enr.courseId}`);
-              const courseObj = cRes.data?.course || cRes.data?.data || cRes.data;
-              return { ...enr, courseId: courseObj };
-            } catch (e) {
+              const courseObj =
+                cRes.data?.course || cRes.data?.data || cRes.data;
+              return courseObj?._id ? { ...enr, courseId: courseObj } : enr;
+            } catch {
               return enr;
             }
-          }
-          return enr;
-        })
-      );
+          }),
+        );
 
-      setEnrollments(populatedEnrollments);
-      setPayments(payList);
-      setMyAssignmentSubs(assignSubs);
-      setMyQuizSubs(quizSubs);
-      setLoading(false);
-    });
+        if (isMounted) {
+          setEnrollments(populatedEnrollments);
+          setPayments(payList);
+          setMyAssignmentSubs(assignSubs);
+          setMyQuizSubs(quizSubs);
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    loadDashboard();
+    return () => {
+      isMounted = false;
+    };
 
     // Fetch organization info if user belongs to one
-    if (user?.organizationId) {
-      if (typeof user.organizationId === "object") {
-        setOrganization(user.organizationId as Organization);
-      } else {
-        api
-          .get(`/organization/${user.organizationId}`)
-          .then((res) => {
-            const orgData = res.data?.organization || res.data?.data || res.data;
-            setOrganization(orgData);
-          })
-          .catch(() => {});
-      }
-    } else {
-      setOrganization(null);
+    if (organizationId) {
+      api
+        .get(`/organization/${organizationId}`)
+        .then((res) => {
+          const orgData = res.data?.organization || res.data?.data || res.data;
+          setFetchedOrganization(orgData);
+        })
+        .catch(() => {});
     }
-  }, [user, fetchNotifications]);
+  }, [user, organizationId, fetchNotifications]);
+
+  const organization =
+    typeof user?.organizationId === "object"
+      ? user.organizationId
+      : fetchedOrganization;
 
   const activeEnrollments = enrollments.filter((e) => e.status !== "cancelled");
-  const completedCount = enrollments.filter(
-    (e) => e.status === "completed" || (e.progressPercentage ?? e.progress ?? 0) >= 100
-  ).length;
-
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-100">
       <Sidebar />
@@ -127,10 +151,10 @@ export default function StudentDashboardPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
-              Welcome back, {user?.name?.split(" ")[0]} 👋
+              {t("welcomeBack")}, {user?.name?.split(" ")[0]} 👋
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 mt-1">
-              Track course progress, study materials, grades, and academy certifications.
+              {t("studentProgressSummary")}
             </p>
           </div>
 
@@ -139,14 +163,15 @@ export default function StudentDashboardPage() {
               <div className="flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs">
                 <Building2 className="w-4 h-4 text-indigo-400" />
                 <span>
-                  Affiliation: <strong className="text-white">{organization.name}</strong>
+                  {t("affiliation")}:{" "}
+                  <strong className="text-white">{organization.name}</strong>
                 </span>
                 <button
                   onClick={() => setIsJoinModalOpen(true)}
                   className="text-[11px] underline text-indigo-400 hover:text-indigo-300 ml-1"
-                  title="Switch or enter a new organization code"
+                  title={t("switchOrganizationTitle")}
                 >
-                  Change
+                  {t("change")}
                 </button>
               </div>
             ) : (
@@ -156,7 +181,7 @@ export default function StudentDashboardPage() {
                 onClick={() => setIsJoinModalOpen(true)}
                 icon={<KeyRound className="w-4 h-4" />}
               >
-                Join Organization with Code
+                {t("joinOrganizationCode")}
               </Button>
             )}
           </div>
@@ -164,15 +189,17 @@ export default function StudentDashboardPage() {
 
         {/* Organization Banner if Not Joined */}
         {!organization && (
-          <div className="p-5 rounded-3xl bg-gradient-to-r from-indigo-950/60 via-slate-900 to-purple-950/40 border border-indigo-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
+          <div className="p-5 rounded-3xl bg-linear-to-r from-indigo-950/60 via-slate-900 to-purple-950/40 border border-indigo-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
             <div className="flex items-center gap-4">
               <div className="p-3 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400">
                 <Building2 className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">Have an Academy or School Join Code?</h3>
+                <h3 className="text-sm font-bold text-white">
+                  {t("academyJoinCode")}
+                </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Connect your student account with your educational center to unlock private curriculum and group schedules.
+                  {t("academyJoinHint")}
                 </p>
               </div>
             </div>
@@ -182,7 +209,7 @@ export default function StudentDashboardPage() {
               onClick={() => setIsJoinModalOpen(true)}
               icon={<KeyRound className="w-4 h-4" />}
             >
-              Enter Code
+              {t("enterCode")}
             </Button>
           </div>
         )}
@@ -190,19 +217,21 @@ export default function StudentDashboardPage() {
         {/* Metrics Overview */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <StatCard
-            title="Enrolled Courses"
+            title={t("enrolledCourses")}
             value={activeEnrollments.length}
             icon={<BookOpen className="w-5 h-5 text-indigo-400" />}
           />
           <StatCard
-            title="Submitted Solutions"
+            title={t("submittedSolutions")}
             value={myAssignmentSubs.length + myQuizSubs.length}
             icon={<Award className="w-5 h-5 text-purple-400" />}
             iconBg="bg-purple-500/10 text-purple-400"
           />
           <StatCard
-            title="Total Spend"
-            value={formatCurrency(payments.reduce((acc, p) => acc + (p.amount || 0), 0))}
+            title={t("totalSpend")}
+            value={formatCurrency(
+              payments.reduce((acc, p) => acc + (p.amount || 0), 0),
+            )}
             icon={<CreditCard className="w-5 h-5 text-emerald-400" />}
             iconBg="bg-emerald-500/10 text-emerald-400"
           />
@@ -218,7 +247,7 @@ export default function StudentDashboardPage() {
                 : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
             }`}
           >
-            My Courses ({activeEnrollments.length})
+            {t("myCourses")} ({activeEnrollments.length})
           </button>
           <button
             onClick={() => setActiveTab("grades")}
@@ -229,7 +258,8 @@ export default function StudentDashboardPage() {
             }`}
           >
             <FileCheck className="w-3.5 h-3.5" />
-            My Submissions & Grades ({myAssignmentSubs.length + myQuizSubs.length})
+            {t("mySubmissionsGrades")} (
+            {myAssignmentSubs.length + myQuizSubs.length})
           </button>
         </div>
 
@@ -237,44 +267,64 @@ export default function StudentDashboardPage() {
         {activeTab === "courses" && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-white">In-Progress Courses</h2>
-              <Link href="/courses" className="text-xs text-indigo-400 hover:underline">
-                Browse More Courses
+              <h2 className="text-lg font-bold text-white">
+                {t("inProgressCourses")}
+              </h2>
+              <Link
+                href="/courses"
+                className="text-xs text-indigo-400 hover:underline"
+              >
+                {t("browseMoreCourses")}
               </Link>
             </div>
 
             {loading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-48 rounded-2xl bg-slate-900 border border-slate-800 animate-pulse" />
+                  <div
+                    key={i}
+                    className="h-48 rounded-2xl bg-slate-900 border border-slate-800 animate-pulse"
+                  />
                 ))}
               </div>
             ) : activeEnrollments.length === 0 ? (
               <div className="p-8 rounded-3xl bg-slate-900/60 border border-slate-800 text-center text-slate-400">
                 <BookOpen className="w-10 h-10 mx-auto mb-2 text-slate-600" />
-                <p className="text-sm font-semibold text-slate-200">No active enrollments yet</p>
-                <p className="text-xs text-slate-500 mt-1">Explore our course catalog and enroll in your first course.</p>
+                <p className="text-sm font-semibold text-slate-200">
+                  {t("noActiveEnrollments")}
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  {t("exploreCatalogHint")}
+                </p>
                 <Link href="/courses" className="mt-4 inline-block">
                   <span className="text-xs font-semibold px-4 py-2 rounded-xl bg-indigo-600 text-white">
-                    Explore Courses
+                    {t("exploreCourses")}
                   </span>
                 </Link>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {activeEnrollments.map((enr) => {
-                  const courseObj = typeof enr.courseId === "object" ? enr.courseId : null;
+                  const courseObj =
+                    typeof enr.courseId === "object" ? enr.courseId : null;
                   if (!courseObj) return null;
 
                   return (
-                    <div key={enr._id} className="relative group flex flex-col justify-between">
-                      <CourseCard course={courseObj} progressPercentage={enr.progressPercentage} />
+                    <div
+                      key={enr._id}
+                      className="relative group flex flex-col justify-between"
+                    >
+                      <CourseCard
+                        course={courseObj}
+                        progressPercentage={enr.progressPercentage}
+                      />
                       <div className="mt-3">
                         <Link
                           href={`/learn/${courseObj._id}/default`}
                           className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-500 transition-colors shadow-md shadow-indigo-600/20"
                         >
-                          <PlayCircle className="w-4 h-4" /> Continue Classroom
+                          <PlayCircle className="w-4 h-4" />{" "}
+                          {t("continueClassroom")}
                         </Link>
                       </div>
                     </div>
@@ -293,43 +343,57 @@ export default function StudentDashboardPage() {
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <Upload className="w-4 h-4 text-purple-400" />
-                  <span>Assignment Submissions & Feedback</span>
+                  <span>{t("assignmentSubmissionsFeedback")}</span>
                 </h3>
-                <p className="text-xs text-slate-400">View graded homework, scores, and teacher comments.</p>
+                <p className="text-xs text-slate-400">
+                  {t("gradedHomeworkHint")}
+                </p>
               </div>
 
               <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60 shadow-xl">
                 <table className="w-full text-left text-xs text-slate-300">
                   <thead className="bg-slate-950/80 text-slate-400 font-semibold uppercase tracking-wider border-b border-slate-800">
                     <tr>
-                      <th className="px-5 py-3.5">Assignment</th>
-                      <th className="px-5 py-3.5">Course</th>
-                      <th className="px-5 py-3.5">Status</th>
-                      <th className="px-5 py-3.5">Grade</th>
-                      <th className="px-5 py-3.5">Instructor Feedback</th>
-                      <th className="px-5 py-3.5">Submitted Date</th>
+                      <th className="px-5 py-3.5">{t("assignment")}</th>
+                      <th className="px-5 py-3.5">{t("course")}</th>
+                      <th className="px-5 py-3.5">{t("status")}</th>
+                      <th className="px-5 py-3.5">{t("grade")}</th>
+                      <th className="px-5 py-3.5">{t("instructorFeedback")}</th>
+                      <th className="px-5 py-3.5">{t("submittedDate")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
                     {myAssignmentSubs.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-5 py-8 text-center text-slate-500">
-                          No assignment solutions submitted yet.
+                        <td
+                          colSpan={6}
+                          className="px-5 py-8 text-center text-slate-500"
+                        >
+                          {t("noAssignmentSolutions")}
                         </td>
                       </tr>
                     ) : (
                       myAssignmentSubs.map((sub) => {
                         const aTitle =
-                          typeof sub.assignmentId === "object" ? sub.assignmentId?.title : "Assignment";
+                          typeof sub.assignmentId === "object"
+                            ? sub.assignmentId?.title
+                            : t("assignment");
                         const cTitle =
-                          typeof (sub as any).courseId === "object"
-                            ? (sub as any).courseId?.title
-                            : "Course";
+                          typeof sub.courseId === "object"
+                            ? sub.courseId?.title
+                            : t("course");
 
                         return (
-                          <tr key={sub._id} className="hover:bg-slate-800/30 transition-colors">
-                            <td className="px-5 py-4 font-semibold text-white">{aTitle}</td>
-                            <td className="px-5 py-4 text-indigo-400">{cTitle}</td>
+                          <tr
+                            key={sub._id}
+                            className="hover:bg-slate-800/30 transition-colors"
+                          >
+                            <td className="px-5 py-4 font-semibold text-white">
+                              {aTitle}
+                            </td>
+                            <td className="px-5 py-4 text-indigo-400">
+                              {cTitle}
+                            </td>
                             <td className="px-5 py-4">
                               <span
                                 className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] border ${
@@ -338,12 +402,16 @@ export default function StudentDashboardPage() {
                                     : "bg-amber-500/10 text-amber-400 border-amber-500/20"
                                 }`}
                               >
-                                {sub.status === "graded" ? "Graded" : "Under Review"}
+                                {sub.status === "graded"
+                                  ? t("graded")
+                                  : t("underReview")}
                               </span>
                             </td>
                             <td className="px-5 py-4 font-bold text-white">
                               {sub.grade !== undefined ? (
-                                <span className="text-emerald-400 text-sm font-extrabold">{sub.grade} Pts</span>
+                                <span className="text-emerald-400 text-sm font-extrabold">
+                                  {sub.grade} {t("pts")}
+                                </span>
                               ) : (
                                 <span className="text-slate-500">-</span>
                               )}
@@ -351,10 +419,12 @@ export default function StudentDashboardPage() {
                             <td className="px-5 py-4 text-slate-300 max-w-xs">
                               {sub.feedback ? (
                                 <div className="p-2 rounded-lg bg-indigo-950/20 border border-indigo-500/30 italic text-[11px]">
-                                  "{sub.feedback}"
+                                  &quot;{sub.feedback}&quot;
                                 </div>
                               ) : (
-                                <span className="text-slate-500 italic">No comments yet</span>
+                                <span className="text-slate-500 italic">
+                                  {t("comments")}
+                                </span>
                               )}
                             </td>
                             <td className="px-5 py-4 text-slate-400">
@@ -374,38 +444,48 @@ export default function StudentDashboardPage() {
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <HelpCircle className="w-4 h-4 text-indigo-400" />
-                  <span>Quiz Attempts & Test Scores</span>
+                  <span>{t("quizAttemptsScores")}</span>
                 </h3>
-                <p className="text-xs text-slate-400">Summary of multiple choice and module quizzes completed.</p>
+                <p className="text-xs text-slate-400">{t("quizSummaryHint")}</p>
               </div>
 
               <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60 shadow-xl">
                 <table className="w-full text-left text-xs text-slate-300">
                   <thead className="bg-slate-950/80 text-slate-400 font-semibold uppercase tracking-wider border-b border-slate-800">
                     <tr>
-                      <th className="px-5 py-3.5">Quiz Title</th>
-                      <th className="px-5 py-3.5">Score</th>
-                      <th className="px-5 py-3.5">Result</th>
-                      <th className="px-5 py-3.5">Completed Date</th>
+                      <th className="px-5 py-3.5">{t("quizTitle")}</th>
+                      <th className="px-5 py-3.5">{t("score")}</th>
+                      <th className="px-5 py-3.5">{t("result")}</th>
+                      <th className="px-5 py-3.5">{t("completedDate")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
                     {myQuizSubs.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="px-5 py-8 text-center text-slate-500">
-                          No quiz attempts recorded yet.
+                        <td
+                          colSpan={4}
+                          className="px-5 py-8 text-center text-slate-500"
+                        >
+                          {t("noQuizAttempts")}
                         </td>
                       </tr>
                     ) : (
                       myQuizSubs.map((qSub) => {
                         const qTitle =
-                          typeof qSub.quizId === "object" ? qSub.quizId?.title : "Quiz";
+                          typeof qSub.quizId === "object"
+                            ? qSub.quizId?.title
+                            : t("quizTitle");
 
                         return (
-                          <tr key={qSub._id} className="hover:bg-slate-800/30 transition-colors">
-                            <td className="px-5 py-4 font-semibold text-white">{qTitle}</td>
+                          <tr
+                            key={qSub._id}
+                            className="hover:bg-slate-800/30 transition-colors"
+                          >
+                            <td className="px-5 py-4 font-semibold text-white">
+                              {qTitle}
+                            </td>
                             <td className="px-5 py-4 font-extrabold text-white text-sm">
-                              {qSub.totalScore !== undefined ? qSub.totalScore : qSub.score} Pts
+                              {qSub.totalScore ?? qSub.score} {t("pts")}
                             </td>
                             <td className="px-5 py-4">
                               <span
@@ -415,11 +495,17 @@ export default function StudentDashboardPage() {
                                     : "bg-red-500/10 text-red-400 border-red-500/20"
                                 }`}
                               >
-                                {qSub.passed ? "Passed ✓" : "Needs Review ✗"}
+                                {qSub.passed
+                                  ? `${t("passed")} ✓`
+                                  : `${t("needsReviewStatus")} ✗`}
                               </span>
                             </td>
                             <td className="px-5 py-4 text-slate-400">
-                              {qSub.submittedAt || qSub.createdAt ? formatDate(qSub.submittedAt || qSub.createdAt!) : "-"}
+                              {qSub.submittedAt || qSub.createdAt
+                                ? formatDate(
+                                    qSub.submittedAt || qSub.createdAt!,
+                                  )
+                                : "-"}
                             </td>
                           </tr>
                         );
@@ -437,7 +523,7 @@ export default function StudentDashboardPage() {
       <JoinOrganizationModal
         isOpen={isJoinModalOpen}
         onClose={() => setIsJoinModalOpen(false)}
-        onJoined={(org) => setOrganization(org)}
+        onJoined={setFetchedOrganization}
       />
     </div>
   );

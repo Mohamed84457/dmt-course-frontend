@@ -1,7 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { AssignmentSubmission, QuizSubmission, Quiz, QuizQuestion } from "@/types";
+import {
+  AssignmentSubmission,
+  QuizSubmission,
+  Quiz,
+  QuizQuestion,
+} from "@/types";
 import { api } from "@/lib/api";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
@@ -37,19 +42,27 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
   onRefresh,
 }) => {
   const { addToast } = useUIStore();
-  const [activeTab, setActiveTab] = useState<"assignments" | "quizzes">("assignments");
+  const [activeTab, setActiveTab] = useState<"assignments" | "quizzes">(
+    "assignments",
+  );
 
   // Assignment Modal
-  const [selectedSub, setSelectedSub] = useState<AssignmentSubmission | null>(null);
+  const [selectedSub, setSelectedSub] = useState<AssignmentSubmission | null>(
+    null,
+  );
   const [grade, setGrade] = useState("");
   const [feedback, setFeedback] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Quiz Modal (View & Grade student answers)
-  const [selectedQuizSub, setSelectedQuizSub] = useState<QuizSubmission | null>(null);
+  const [selectedQuizSub, setSelectedQuizSub] = useState<QuizSubmission | null>(
+    null,
+  );
   const [quizDetails, setQuizDetails] = useState<Quiz | null>(null);
   const [isLoadingQuizDetails, setIsLoadingQuizDetails] = useState(false);
-  const [questionScores, setQuestionScores] = useState<Record<string, { pointsObtained: number; isCorrect: boolean }>>({});
+  const [questionScores, setQuestionScores] = useState<
+    Record<string, { pointsObtained: number; isCorrect: boolean }>
+  >({});
   const [savingQuestionId, setSavingQuestionId] = useState<string | null>(null);
   const [bonusPoints, setBonusPoints] = useState<number>(0);
   const [isSavingOverall, setIsSavingOverall] = useState(false);
@@ -81,7 +94,10 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
       .finally(() => setIsLoadingQuizDetails(false));
 
     // Initialize question scores map
-    const initialScores: Record<string, { pointsObtained: number; isCorrect: boolean }> = {};
+    const initialScores: Record<
+      string,
+      { pointsObtained: number; isCorrect: boolean }
+    > = {};
     selectedQuizSub.answers?.forEach((ans) => {
       initialScores[ans.questionId] = {
         pointsObtained: ans.pointsObtained ?? ans.scoreAwarded ?? 0,
@@ -132,11 +148,14 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
 
     setSavingQuestionId(questionId);
     try {
-      const res = await api.patch(`/quiz-submissions/answer/${selectedQuizSub._id}`, {
-        questionId,
-        pointsObtained: Number(qState.pointsObtained),
-        isCorrect: Boolean(qState.isCorrect),
-      });
+      const res = await api.patch(
+        `/quiz-submissions/answer/${selectedQuizSub._id}`,
+        {
+          questionId,
+          pointsObtained: Number(qState.pointsObtained),
+          isCorrect: Boolean(qState.isCorrect),
+        },
+      );
 
       if (res.data?.submission) {
         setSelectedQuizSub(res.data.submission);
@@ -164,7 +183,8 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
     if (!selectedQuizSub) return;
     setIsSavingOverall(true);
     try {
-      const currentScore = selectedQuizSub.score ?? selectedQuizSub.totalScore ?? 0;
+      const currentScore =
+        selectedQuizSub.score ?? selectedQuizSub.totalScore ?? 0;
       const totalScore = currentScore + Number(bonusPoints);
       const passingMarks = quizDetails?.passingMarks ?? 60;
       const isPassed = totalScore >= passingMarks;
@@ -189,7 +209,8 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
       addToast({
         type: "error",
         title: "Update Error",
-        message: err.response?.data?.message || "Failed to update quiz submission",
+        message:
+          err.response?.data?.message || "Failed to update quiz submission",
       });
     } finally {
       setIsSavingOverall(false);
@@ -229,8 +250,12 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
       {activeTab === "assignments" && (
         <div className="space-y-4">
           <div>
-            <h3 className="text-base font-bold text-white">Student Assignment Submissions</h3>
-            <p className="text-xs text-slate-400">Review solutions, provide feedback, and record marks.</p>
+            <h3 className="text-base font-bold text-white">
+              Student Assignment Submissions
+            </h3>
+            <p className="text-xs text-slate-400">
+              Review solutions, provide feedback, and record marks.
+            </p>
           </div>
 
           <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60 shadow-xl">
@@ -248,23 +273,35 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
               <tbody className="divide-y divide-slate-800/60">
                 {submissions.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-8 text-center text-slate-500">
+                    <td
+                      colSpan={6}
+                      className="px-5 py-8 text-center text-slate-500"
+                    >
                       No assignment submissions awaiting review.
                     </td>
                   </tr>
                 ) : (
                   submissions.map((sub) => {
                     const studentName =
-                      typeof sub.studentId === "object" ? sub.studentId?.name : "Student";
+                      typeof sub.studentId === "object"
+                        ? String(sub.studentId?.name ?? "Student")
+                        : "Student";
                     const assignmentTitle =
                       typeof sub.assignmentId === "object"
                         ? sub.assignmentId?.title
                         : "Assignment";
 
                     return (
-                      <tr key={sub._id} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="px-5 py-4 font-semibold text-white">{studentName}</td>
-                        <td className="px-5 py-4 text-indigo-400 font-medium">{assignmentTitle}</td>
+                      <tr
+                        key={sub._id}
+                        className="hover:bg-slate-800/30 transition-colors"
+                      >
+                        <td className="px-5 py-4 font-semibold text-white">
+                          {studentName}
+                        </td>
+                        <td className="px-5 py-4 text-indigo-400 font-medium">
+                          {assignmentTitle}
+                        </td>
                         <td className="px-5 py-4">
                           <span
                             className={`px-2 py-0.5 rounded-full font-semibold uppercase text-[10px] border ${
@@ -310,9 +347,12 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
       {activeTab === "quizzes" && (
         <div className="space-y-4">
           <div>
-            <h3 className="text-base font-bold text-white">Student Quiz Attempts & Assessment Grading</h3>
+            <h3 className="text-base font-bold text-white">
+              Student Quiz Attempts & Assessment Grading
+            </h3>
             <p className="text-xs text-slate-400">
-              Inspect student answers, grade short-answer questions, and adjust scores.
+              Inspect student answers, grade short-answer questions, and adjust
+              scores.
             </p>
           </div>
 
@@ -331,24 +371,40 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
               <tbody className="divide-y divide-slate-800/60">
                 {quizSubmissions.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-8 text-center text-slate-500">
+                    <td
+                      colSpan={6}
+                      className="px-5 py-8 text-center text-slate-500"
+                    >
                       No quiz submissions recorded yet.
                     </td>
                   </tr>
                 ) : (
                   quizSubmissions.map((qSub) => {
                     const studentName =
-                      typeof qSub.studentId === "object" ? qSub.studentId?.name : "Student";
+                      typeof qSub.studentId === "object"
+                        ? String(qSub.studentId?.name ?? "Student")
+                        : "Student";
                     const quizTitle =
-                      typeof qSub.quizId === "object" ? qSub.quizId?.title : "Quiz";
+                      typeof qSub.quizId === "object"
+                        ? qSub.quizId?.title
+                        : "Quiz";
                     const isPassed = Boolean(qSub.isPassed ?? qSub.passed);
 
                     return (
-                      <tr key={qSub._id} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="px-5 py-4 font-semibold text-white">{studentName}</td>
-                        <td className="px-5 py-4 text-purple-400 font-medium">{quizTitle}</td>
+                      <tr
+                        key={qSub._id}
+                        className="hover:bg-slate-800/30 transition-colors"
+                      >
+                        <td className="px-5 py-4 font-semibold text-white">
+                          {studentName}
+                        </td>
+                        <td className="px-5 py-4 text-purple-400 font-medium">
+                          {quizTitle}
+                        </td>
                         <td className="px-5 py-4 font-bold text-white">
-                          {qSub.totalScore !== undefined ? qSub.totalScore : qSub.score ?? "-"}
+                          {qSub.totalScore !== undefined
+                            ? qSub.totalScore
+                            : (qSub.score ?? "-")}
                         </td>
                         <td className="px-5 py-4">
                           <span
@@ -362,13 +418,17 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
                           </span>
                         </td>
                         <td className="px-5 py-4 text-slate-400">
-                          {qSub.submittedAt || qSub.createdAt ? formatDate(qSub.submittedAt || qSub.createdAt!) : "-"}
+                          {qSub.submittedAt || qSub.createdAt
+                            ? formatDate(qSub.submittedAt || qSub.createdAt!)
+                            : "-"}
                         </td>
                         <td className="px-5 py-4 text-right">
                           <Button
                             variant="outline"
                             size="sm"
-                            icon={<Award className="w-3.5 h-3.5 text-indigo-400" />}
+                            icon={
+                              <Award className="w-3.5 h-3.5 text-indigo-400" />
+                            }
                             onClick={() => setSelectedQuizSub(qSub)}
                           >
                             Correct & Grade
@@ -409,7 +469,8 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
                     rel="noreferrer"
                     className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:underline"
                   >
-                    <ExternalLink className="w-3.5 h-3.5" /> View Submitted File / Project
+                    <ExternalLink className="w-3.5 h-3.5" /> View Submitted File
+                    / Project
                   </a>
                 </div>
               )}
@@ -438,10 +499,20 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
             </div>
 
             <div className="flex justify-end gap-3 pt-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => setSelectedSub(null)}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedSub(null)}
+              >
                 Cancel
               </Button>
-              <Button type="submit" variant="primary" size="sm" isLoading={isSubmitting}>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                isLoading={isSubmitting}
+              >
                 Save Grade
               </Button>
             </div>
@@ -461,19 +532,25 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
             {/* Overview Summary */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-2xl bg-slate-950 border border-slate-800 text-xs">
               <div>
-                <span className="text-[10px] text-slate-500 uppercase font-bold">Auto/Base Score</span>
+                <span className="text-[10px] text-slate-500 uppercase font-bold">
+                  Auto/Base Score
+                </span>
                 <p className="font-bold text-white text-base mt-0.5">
                   {selectedQuizSub.score ?? 0} pts
                 </p>
               </div>
               <div>
-                <span className="text-[10px] text-slate-500 uppercase font-bold">Total Final Score</span>
+                <span className="text-[10px] text-slate-500 uppercase font-bold">
+                  Total Final Score
+                </span>
                 <p className="font-bold text-indigo-400 text-base mt-0.5">
                   {selectedQuizSub.totalScore ?? selectedQuizSub.score ?? 0} pts
                 </p>
               </div>
               <div>
-                <span className="text-[10px] text-slate-500 uppercase font-bold">Status</span>
+                <span className="text-[10px] text-slate-500 uppercase font-bold">
+                  Status
+                </span>
                 <p
                   className={`font-bold text-base mt-0.5 ${
                     Boolean(selectedQuizSub.isPassed ?? selectedQuizSub.passed)
@@ -481,7 +558,9 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
                       : "text-rose-400"
                   }`}
                 >
-                  {Boolean(selectedQuizSub.isPassed ?? selectedQuizSub.passed) ? "Passed" : "Needs Review / Failed"}
+                  {Boolean(selectedQuizSub.isPassed ?? selectedQuizSub.passed)
+                    ? "Passed"
+                    : "Needs Review / Failed"}
                 </p>
               </div>
             </div>
@@ -497,10 +576,11 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
                   <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
                   <span>Loading assessment questions...</span>
                 </div>
-              ) : selectedQuizSub.answers && selectedQuizSub.answers.length > 0 ? (
+              ) : selectedQuizSub.answers &&
+                selectedQuizSub.answers.length > 0 ? (
                 selectedQuizSub.answers.map((ans, idx) => {
                   const qMeta = quizDetails?.questions?.find(
-                    (q) => String(q._id) === String(ans.questionId)
+                    (q) => String(q._id) === String(ans.questionId),
                   );
                   const currentScoreState = questionScores[ans.questionId] || {
                     pointsObtained: ans.pointsObtained ?? ans.scoreAwarded ?? 0,
@@ -518,10 +598,14 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
                         <div className="space-y-0.5">
                           <span className="font-bold text-white">
-                            Question #{idx + 1}: {qMeta?.questionText || `Question ID: ${ans.questionId}`}
+                            Question #{idx + 1}:{" "}
+                            {qMeta?.questionText ||
+                              `Question ID: ${ans.questionId}`}
                           </span>
                           <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                            <span className="capitalize">Type: {qMeta?.questionType || "Standard"}</span>
+                            <span className="capitalize">
+                              Type: {qMeta?.questionType || "Standard"}
+                            </span>
                             <span>•</span>
                             <span>Max Points: {qMeta?.points || 1}</span>
                           </div>
@@ -534,7 +618,9 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
                               : "bg-rose-500/10 text-rose-400 border-rose-500/20"
                           }`}
                         >
-                          {currentScoreState.isCorrect ? "✓ Marked Correct" : "✗ Marked Incorrect"}
+                          {currentScoreState.isCorrect
+                            ? "✓ Marked Correct"
+                            : "✗ Marked Incorrect"}
                         </span>
                       </div>
 
@@ -547,18 +633,27 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
                           <p className="text-white text-xs leading-relaxed whitespace-pre-wrap">
                             "{ans.answerText}"
                           </p>
-                        ) : ans.selectedOptionId || ans.selectedOptionIndex !== undefined ? (
+                        ) : ans.selectedOptionId ||
+                          ans.selectedOptionIndex !== undefined ? (
                           <div className="space-y-1">
                             <p className="text-white text-xs">
                               Option Selected:{" "}
                               <span className="font-semibold text-indigo-400">
-                                {qMeta?.options?.find((o) => String(o._id) === String(ans.selectedOptionId))?.optionText ||
-                                  (ans.selectedOptionIndex !== undefined ? `Choice #${ans.selectedOptionIndex + 1}` : ans.selectedOptionId)}
+                                {qMeta?.options?.find(
+                                  (o) =>
+                                    String(o._id) ===
+                                    String(ans.selectedOptionId),
+                                )?.optionText ||
+                                  (ans.selectedOptionIndex !== undefined
+                                    ? `Choice #${ans.selectedOptionIndex + 1}`
+                                    : ans.selectedOptionId)}
                               </span>
                             </p>
                           </div>
                         ) : (
-                          <p className="text-slate-500 italic text-xs">No response provided</p>
+                          <p className="text-slate-500 italic text-xs">
+                            No response provided
+                          </p>
                         )}
                       </div>
 
@@ -600,7 +695,10 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
                                     [ans.questionId]: {
                                       ...prev[ans.questionId],
                                       isCorrect: true,
-                                      pointsObtained: prev[ans.questionId]?.pointsObtained || qMeta?.points || 1,
+                                      pointsObtained:
+                                        prev[ans.questionId]?.pointsObtained ||
+                                        qMeta?.points ||
+                                        1,
                                     },
                                   }))
                                 }
@@ -642,7 +740,9 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
                           size="sm"
                           isLoading={isSavingThis}
                           icon={<Save className="w-3.5 h-3.5" />}
-                          onClick={() => handleSaveQuestionGrade(ans.questionId)}
+                          onClick={() =>
+                            handleSaveQuestionGrade(ans.questionId)
+                          }
                         >
                           Save Question Grade
                         </Button>
@@ -651,7 +751,9 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
                   );
                 })
               ) : (
-                <p className="text-xs text-slate-500">No individual questions logged.</p>
+                <p className="text-xs text-slate-500">
+                  No individual questions logged.
+                </p>
               )}
             </div>
 
@@ -664,7 +766,9 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <label className="text-slate-300 font-medium">Bonus Points:</label>
+                  <label className="text-slate-300 font-medium">
+                    Bonus Points:
+                  </label>
                   <input
                     type="number"
                     min={0}
@@ -686,7 +790,11 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
             </div>
 
             <div className="flex justify-end pt-2">
-              <Button variant="outline" size="sm" onClick={() => setSelectedQuizSub(null)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedQuizSub(null)}
+              >
                 Close
               </Button>
             </div>
@@ -696,4 +804,3 @@ export const GradingPortal: React.FC<GradingPortalProps> = ({
     </div>
   );
 };
-

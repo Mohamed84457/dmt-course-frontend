@@ -31,7 +31,10 @@ export const useCourseStore = create<CourseState>((set, get) => ({
     set({ isLoading: true });
     try {
       const res = await api.get("/courses", { params });
-      const list = res.data?.courses || res.data?.data || (Array.isArray(res.data) ? res.data : []);
+      const list =
+        res.data?.courses ||
+        res.data?.data ||
+        (Array.isArray(res.data) ? res.data : []);
       set({ courses: list, isLoading: false });
     } catch (err) {
       set({ isLoading: false });
@@ -41,7 +44,10 @@ export const useCourseStore = create<CourseState>((set, get) => ({
   fetchCategories: async () => {
     try {
       const res = await api.get("/categories");
-      const list = res.data?.categories || res.data?.data || (Array.isArray(res.data) ? res.data : []);
+      const list =
+        res.data?.categories ||
+        res.data?.data ||
+        (Array.isArray(res.data) ? res.data : []);
       set({ categories: list });
     } catch (err) {}
   },
@@ -50,7 +56,11 @@ export const useCourseStore = create<CourseState>((set, get) => ({
     set({ isLoading: true });
     try {
       const res = await api.get(`/courses/${id}`);
-      const course = res.data?.course || res.data?.data || res.data;
+      const course =
+        res.data?.course ||
+        res.data?.data?.course ||
+        res.data?.data ||
+        res.data;
       set({ activeCourse: course, isLoading: false });
       return course;
     } catch (err) {
@@ -68,7 +78,12 @@ export const useCourseStore = create<CourseState>((set, get) => ({
       } catch {
         res = await api.get(`/lessons/course/${courseId}`);
       }
-      const lessons = res.data?.lessons || res.data?.data || (Array.isArray(res.data) ? res.data : []);
+      const payload = res.data;
+      const lessons =
+        payload?.lessons ||
+        payload?.data?.lessons ||
+        payload?.data ||
+        (Array.isArray(payload) ? payload : []);
       set({ activeLessons: lessons });
       return lessons;
     } catch (err) {

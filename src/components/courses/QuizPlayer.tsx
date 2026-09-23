@@ -5,19 +5,33 @@ import { Quiz, QuizSubmission, QuizQuestion } from "@/types";
 import { api } from "@/lib/api";
 import { Button } from "../ui/Button";
 import { useUIStore } from "@/store/useUIStore";
-import { HelpCircle, CheckCircle, XCircle, Award, RotateCcw, Loader2 } from "lucide-react";
+import { useAppPreferences } from "@/components/providers/AppPreferences";
+import {
+  HelpCircle,
+  CheckCircle,
+  XCircle,
+  Award,
+  RotateCcw,
+  Loader2,
+} from "lucide-react";
 
 interface QuizPlayerProps {
   quiz: Quiz;
   onComplete?: () => void;
 }
 
-export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz: initialQuiz, onComplete }) => {
+export const QuizPlayer: React.FC<QuizPlayerProps> = ({
+  quiz: initialQuiz,
+  onComplete,
+}) => {
   const { addToast } = useUIStore();
+  const { t } = useAppPreferences();
   const [quiz, setQuiz] = useState<Quiz>(initialQuiz);
   const [isLoadingQuiz, setIsLoadingQuiz] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
+  const [selectedAnswers, setSelectedAnswers] = useState<
+    Record<number, number>
+  >({});
   const [essayAnswers, setEssayAnswers] = useState<Record<number, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<QuizSubmission | null>(null);
@@ -64,10 +78,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz: initialQuiz, onCom
     try {
       const answersPayload = questions.map((q, idx) => {
         const selectedIdx = selectedAnswers[idx];
-        const selectedOpt =
-          selectedIdx !== undefined && q.options && q.options[selectedIdx]
-            ? q.options[selectedIdx]
-            : null;
+        const selectedOpt = q.options?.[selectedIdx ?? -1] ?? null;
 
         const payloadItem: {
           questionId: string;
@@ -94,22 +105,22 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz: initialQuiz, onCom
       const submission: QuizSubmission =
         res.data?.submission || res.data?.submit || res.data?.data || res.data;
       setResult(submission);
-      
+
       const isPassed = Boolean(submission.isPassed ?? submission.passed);
       const finalScore = submission.totalScore ?? submission.score ?? 0;
 
       addToast({
         type: isPassed ? "success" : "info",
-        title: isPassed ? "Assessment Passed!" : "Quiz Submitted",
-        message: `Your score: ${finalScore} points.`,
+        title: isPassed ? t("assessmentPassed") : t("quizSubmitted"),
+        message: `${t("yourScore")}: ${finalScore} ${t("points")}.`,
       });
 
       if (onComplete) onComplete();
     } catch (err: any) {
       addToast({
         type: "error",
-        title: "Submission Error",
-        message: err.response?.data?.message || "Failed to submit quiz. Please try again.",
+        title: t("submissionError"),
+        message: err.response?.data?.message || t("failedSubmitQuiz"),
       });
     } finally {
       setIsSubmitting(false);
@@ -120,7 +131,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz: initialQuiz, onCom
     return (
       <div className="rounded-2xl bg-slate-900 border border-slate-800 p-12 text-center text-slate-400 flex flex-col items-center justify-center gap-3">
         <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-        <p className="text-sm font-medium">Loading assessment questions...</p>
+        <p className="text-sm font-medium">{t("loadingQuestions")}</p>
       </div>
     );
   }
@@ -129,15 +140,17 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz: initialQuiz, onCom
     return (
       <div className="rounded-2xl bg-slate-900 border border-slate-800 p-8 text-center text-slate-400 space-y-3">
         <HelpCircle className="w-10 h-10 text-slate-600 mx-auto" />
-        <h4 className="text-base font-bold text-white">No questions available</h4>
+        <h4 className="text-base font-bold text-white">{t("noQuestions")}</h4>
         <p className="text-xs text-slate-400 max-w-sm mx-auto">
-          This quiz doesn't have any published questions yet. Please check back later.
+          {t("noPublishedQuestions")}
         </p>
       </div>
     );
   }
 
-  const isQuizPassed = result ? Boolean(result.isPassed ?? result.passed) : false;
+  const isQuizPassed = result
+    ? Boolean(result.isPassed ?? result.passed)
+    : false;
 
   return (
     <div className="rounded-2xl bg-slate-900 border border-slate-800 p-6 shadow-xl text-slate-100">
@@ -145,12 +158,14 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz: initialQuiz, onCom
       <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
         <div>
           <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">
-            Interactive Assessment
+            {t("interactiveAssessment")}
           </span>
           <h3 className="text-xl font-bold text-white mt-1">{quiz.title}</h3>
         </div>
         <div className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300">
-          Question {currentQuestionIndex + 1} of {questions.length}
+          {t("questionOf")
+            .replace("{current}", String(currentQuestionIndex + 1))
+            .replace("{total}", String(questions.length))}
         </div>
       </div>
 
@@ -162,24 +177,26 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz: initialQuiz, onCom
           </div>
 
           <div>
-            <h4 className="text-2xl font-bold text-white">Quiz Completed!</h4>
+            <h4 className="text-2xl font-bold text-white">
+              {t("quizCompleted")}
+            </h4>
             <p className="text-sm text-slate-400 mt-1">
-              Your final score:{" "}
+              {t("finalScore")}:{" "}
               <span className="font-bold text-indigo-400">
                 {result.totalScore ?? result.score ?? 0}
               </span>{" "}
-              points
+              {t("points")}
             </p>
           </div>
 
           <div className="inline-block rounded-xl px-4 py-2 border bg-slate-950/60 text-sm font-semibold">
             {isQuizPassed ? (
               <span className="text-emerald-400 flex items-center justify-center gap-2">
-                <CheckCircle className="w-4 h-4" /> Passed Assessment
+                <CheckCircle className="w-4 h-4" /> {t("passedAssessment")}
               </span>
             ) : (
               <span className="text-rose-400 flex items-center justify-center gap-2">
-                <XCircle className="w-4 h-4" /> Needs Review
+                <XCircle className="w-4 h-4" /> {t("needsReview")}
               </span>
             )}
           </div>
@@ -196,7 +213,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz: initialQuiz, onCom
                 setCurrentQuestionIndex(0);
               }}
             >
-              Try Again
+              {t("tryAgain")}
             </Button>
           </div>
         </div>
@@ -209,7 +226,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz: initialQuiz, onCom
             </h4>
             {currentQ.points ? (
               <span className="text-[11px] text-slate-400 mt-1 block">
-                Worth: {currentQ.points} point{currentQ.points > 1 ? "s" : ""}
+                {t("worth")}: {currentQ.points} {t("points")}
               </span>
             ) : null}
           </div>
@@ -218,12 +235,15 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz: initialQuiz, onCom
           {currentQ.options && currentQ.options.length > 0 ? (
             <div className="space-y-3">
               {currentQ.options.map((opt, optIdx) => {
-                const isSelected = selectedAnswers[currentQuestionIndex] === optIdx;
+                const isSelected =
+                  selectedAnswers[currentQuestionIndex] === optIdx;
 
                 return (
                   <button
                     key={opt._id || optIdx}
-                    onClick={() => handleSelectOption(currentQuestionIndex, optIdx)}
+                    onClick={() =>
+                      handleSelectOption(currentQuestionIndex, optIdx)
+                    }
                     className={`w-full flex items-center justify-between p-4 rounded-xl border text-left text-sm font-medium transition-all duration-200 ${
                       isSelected
                         ? "bg-indigo-600/15 border-indigo-500 text-white shadow-md shadow-indigo-500/10"
@@ -238,7 +258,9 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz: initialQuiz, onCom
                           : "border-slate-700"
                       }`}
                     >
-                      {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
+                      {isSelected && (
+                        <div className="w-2 h-2 bg-white rounded-full" />
+                      )}
                     </div>
                   </button>
                 );
@@ -256,7 +278,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz: initialQuiz, onCom
                   }))
                 }
                 rows={4}
-                placeholder="Type your response here..."
+                placeholder={t("typeResponse")}
                 className="w-full rounded-xl bg-slate-950 border border-slate-800 p-4 text-sm text-white focus:outline-none focus:border-indigo-500"
               />
             </div>
@@ -270,7 +292,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz: initialQuiz, onCom
               disabled={currentQuestionIndex === 0}
               onClick={() => setCurrentQuestionIndex((prev) => prev - 1)}
             >
-              Previous
+              {t("previous")}
             </Button>
 
             {currentQuestionIndex < questions.length - 1 ? (
@@ -279,7 +301,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz: initialQuiz, onCom
                 size="sm"
                 onClick={() => setCurrentQuestionIndex((prev) => prev + 1)}
               >
-                Next Question
+                {t("nextQuestion")}
               </Button>
             ) : (
               <Button
@@ -288,7 +310,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz: initialQuiz, onCom
                 isLoading={isSubmitting}
                 onClick={handleSubmitQuiz}
               >
-                Submit Assessment
+                {t("submitAssessment")}
               </Button>
             )}
           </div>
@@ -297,4 +319,3 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz: initialQuiz, onCom
     </div>
   );
 };
-

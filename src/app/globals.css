@@ -22,5 +22,103 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, sans-serif;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+html[data-theme="light"] body {
+  --background: #f6f8fc;
+  --foreground: #172033;
+}
+
+html[data-theme="light"] .bg-slate-950,
+html[data-theme="light"] .bg-slate-950\/80 {
+  background-color: #f6f8fc !important;
+}
+
+html[data-theme="light"] .bg-slate-900,
+html[data-theme="light"] .bg-slate-900\/60,
+html[data-theme="light"] .bg-slate-900\/80 {
+  background-color: #ffffff !important;
+}
+
+html[data-theme="light"] .bg-slate-800,
+html[data-theme="light"] .bg-slate-800\/60 {
+  background-color: #e8edf5 !important;
+}
+
+html[data-theme="light"] .text-white,
+html[data-theme="light"] .text-slate-100,
+html[data-theme="light"] .text-slate-200 {
+  color: #172033 !important;
+}
+
+html[data-theme="light"] .text-slate-300,
+html[data-theme="light"] .text-slate-400 {
+  color: #526078 !important;
+}
+
+html[data-theme="light"] .text-slate-500 {
+  color: #71809a !important;
+}
+
+html[data-theme="light"] [class*="border-slate-8"],
+html[data-theme="light"] [class*="border-slate-9"] {
+  border-color: #d9e0eb !important;
+}
+
+html[dir="rtl"] input,
+html[dir="rtl"] select {
+  text-align: right;
+}
+
+.course-detail-page {
+  --course-heading: #f8fafc;
+  --course-body: #cbd5e1;
+  --course-muted: #94a3b8;
+  --course-surface: #0f172a;
+  --course-subtle: #020617;
+  --course-border: #1e293b;
+}
+
+.course-detail-page .course-heading {
+  color: var(--course-heading) !important;
+}
+
+.course-detail-page .course-body {
+  color: var(--course-body) !important;
+}
+
+.course-detail-page .course-muted {
+  color: var(--course-muted) !important;
+}
+
+.course-detail-page .course-surface {
+  background-color: var(--course-surface) !important;
+  border-color: var(--course-border) !important;
+}
+
+.course-detail-page .course-subtle {
+  background-color: var(--course-subtle) !important;
+  border-color: var(--course-border) !important;
+}
+
+.course-detail-page .course-enroll-button {
+  background-color: #4f46e5 !important;
+  color: #ffffff !important;
+}
+
+.course-detail-page .course-enroll-button:hover {
+  background-color: #6366f1 !important;
+}
+
+html[data-theme="light"] .course-detail-page {
+  --course-heading: #172033;
+  --course-body: #334155;
+  --course-muted: #526078;
+  --course-surface: #ffffff;
+  --course-subtle: #eef3f9;
+  --course-border: #d9e0eb;
 }

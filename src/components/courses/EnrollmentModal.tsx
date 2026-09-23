@@ -9,6 +9,7 @@ import { useUIStore } from "@/store/useUIStore";
 import { formatCurrency } from "@/lib/utils";
 import { CheckCircle2, ShieldCheck, CreditCard } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useAppPreferences } from "@/components/providers/AppPreferences";
 
 interface EnrollmentModalProps {
   isOpen: boolean;
@@ -23,24 +24,28 @@ export const EnrollmentModal: React.FC<EnrollmentModalProps> = ({
 }) => {
   const router = useRouter();
   const { addToast } = useUIStore();
+  const { t } = useAppPreferences();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleEnroll = async () => {
     setIsSubmitting(true);
     try {
-      const res = await api.post("/enrollments", { courseId: course._id });
+      await api.post("/enrollments", { courseId: course._id });
       addToast({
         type: "success",
-        title: "Enrollment Successful!",
-        message: `You are now enrolled in ${course.title}`,
+        title: t("enrollmentSuccessful"),
+        message: t("enrollmentSuccessMessage").replace(
+          "{course}",
+          course.title,
+        ),
       });
       onClose();
       router.push(`/dashboard/student`);
     } catch (err: any) {
       addToast({
         type: "error",
-        title: "Enrollment Failed",
-        message: err.response?.data?.message || "Could not complete enrollment",
+        title: t("enrollmentFailed"),
+        message: err.response?.data?.message || t("enrollmentError"),
       });
     } finally {
       setIsSubmitting(false);
@@ -51,20 +56,20 @@ export const EnrollmentModal: React.FC<EnrollmentModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Confirm Course Enrollment"
-      description="Instant access to all modules, quizzes, and certificate of completion."
+      title={t("confirmEnrollment")}
+      description={t("enrollmentDescription")}
       maxWidth="md"
     >
       <div className="space-y-6">
-        <div className="rounded-xl bg-slate-950/60 border border-slate-800 p-4 flex items-center justify-between">
+        <div className="rounded-2xl bg-slate-950/70 border border-slate-800 p-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h4 className="text-sm font-bold text-white">{course.title}</h4>
-            <span className="text-xs text-slate-400">Full Access Lifetime Pass</span>
+            <span className="text-xs text-slate-400">{t("lifetimePass")}</span>
           </div>
           <div className="text-right">
-            <span className="text-xs text-slate-500 block">Total</span>
+            <span className="text-xs text-slate-500 block">{t("total")}</span>
             <span className="text-lg font-bold text-indigo-400">
-              {course.price === 0 ? "Free" : formatCurrency(course.price)}
+              {course.price === 0 ? t("free") : formatCurrency(course.price)}
             </span>
           </div>
         </div>
@@ -72,30 +77,36 @@ export const EnrollmentModal: React.FC<EnrollmentModalProps> = ({
         <div className="space-y-2 text-xs text-slate-300">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            <span>Full video & text lesson access</span>
+            <span>{t("fullLessonAccess")}</span>
           </div>
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            <span>Interactive quizzes & practical assignments</span>
+            <span>{t("practicalReview")}</span>
           </div>
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-purple-400" />
-            <span>Verified digital credential upon completion</span>
+            <span>{t("verifiedCredential")}</span>
           </div>
         </div>
 
-        <div className="pt-2 flex justify-end gap-3 border-t border-slate-800">
-          <Button variant="outline" size="sm" onClick={onClose}>
+        <div className="pt-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-slate-800">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full sm:w-auto"
+            onClick={onClose}
+          >
             Cancel
           </Button>
           <Button
             variant="primary"
             size="sm"
+            className="w-full sm:w-auto"
             isLoading={isSubmitting}
             onClick={handleEnroll}
             icon={<CreditCard className="w-4 h-4" />}
           >
-            Confirm & Enroll Now
+            {t("confirmEnrollNow")}
           </Button>
         </div>
       </div>

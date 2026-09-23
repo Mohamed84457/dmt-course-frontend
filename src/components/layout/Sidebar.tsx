@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useUIStore } from "@/store/useUIStore";
 import { hasAnyRole } from "@/lib/utils";
+import { useAppPreferences } from "@/components/providers/AppPreferences";
 import {
   LayoutDashboard,
   BookOpen,
@@ -25,6 +26,7 @@ export const Sidebar: React.FC = () => {
   const pathname = usePathname();
   const { user } = useAuthStore();
   const { sidebarOpen, setSidebarOpen } = useUIStore();
+  const { t } = useAppPreferences();
 
   if (!user) return null;
 
@@ -32,34 +34,74 @@ export const Sidebar: React.FC = () => {
   const isTeacher = hasAnyRole(user.role, ["teacher", "instructor"]);
 
   const studentLinks = [
-    { href: "/dashboard/student", label: "My Overview", icon: LayoutDashboard },
-    { href: "/courses", label: "Browse Catalog", icon: BookOpen },
-    { href: "/profile", label: "Account Profile", icon: Settings },
+    {
+      href: "/dashboard/student",
+      label: t("myOverview"),
+      icon: LayoutDashboard,
+    },
+    { href: "/courses", label: t("browseCatalog"), icon: BookOpen },
+    { href: "/profile", label: t("accountProfile"), icon: Settings },
   ];
 
   const teacherLinks = [
-    { href: "/dashboard/teacher", label: "Teaching Hub", icon: LayoutDashboard },
-    { href: "/dashboard/teacher/courses/new", label: "New Course", icon: PlusCircle },
-    { href: "/dashboard/teacher/grading", label: "Submissions & Grading", icon: FileCheck },
-    { href: "/profile", label: "Profile", icon: Settings },
+    {
+      href: "/dashboard/teacher",
+      label: t("teachingHub"),
+      icon: LayoutDashboard,
+    },
+    {
+      href: "/dashboard/teacher/courses/new",
+      label: t("newCourse"),
+      icon: PlusCircle,
+    },
+    {
+      href: "/dashboard/teacher/grading",
+      label: t("submissionsGrading"),
+      icon: FileCheck,
+    },
+    { href: "/profile", label: t("profile"), icon: Settings },
   ];
 
   const adminLinks = [
-    { href: "/dashboard/admin", label: "Executive Analytics", icon: LayoutDashboard },
-    { href: "/dashboard/admin/users", label: "Users & Roles", icon: Users },
-    { href: "/dashboard/admin/teachers", label: "Teacher Roster", icon: GraduationCap },
-    { href: "/dashboard/admin/organizations", label: "Organizations", icon: Building2 },
-    { href: "/dashboard/admin/categories", label: "Categories", icon: FolderTree },
-    { href: "/dashboard/admin/payments", label: "Financial Ledger", icon: CreditCard },
+    {
+      href: "/dashboard/admin",
+      label: t("executiveAnalytics"),
+      icon: LayoutDashboard,
+    },
+    { href: "/dashboard/admin/users", label: t("usersRoles"), icon: Users },
+    {
+      href: "/dashboard/admin/teachers",
+      label: t("teacherRoster"),
+      icon: GraduationCap,
+    },
+    {
+      href: "/dashboard/admin/organizations",
+      label: t("organizations"),
+      icon: Building2,
+    },
+    {
+      href: "/dashboard/admin/categories",
+      label: t("categories"),
+      icon: FolderTree,
+    },
+    {
+      href: "/dashboard/admin/payments",
+      label: t("financialLedger"),
+      icon: CreditCard,
+    },
   ];
 
-  const navLinks = isStaff ? adminLinks : isTeacher ? teacherLinks : studentLinks;
+  let navLinks = studentLinks;
+  if (isStaff) navLinks = adminLinks;
+  else if (isTeacher) navLinks = teacherLinks;
 
   return (
     <>
       {/* Mobile Backdrop */}
       {sidebarOpen && (
-        <div
+        <button
+          type="button"
+          aria-label={t("closeSidebar")}
           className="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
@@ -75,7 +117,7 @@ export const Sidebar: React.FC = () => {
             {/* Header / Mobile Close */}
             <div className="flex items-center justify-between px-2 lg:hidden">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Menu Navigation
+                {t("menuNavigation")}
               </span>
               <button
                 onClick={() => setSidebarOpen(false)}
@@ -87,13 +129,15 @@ export const Sidebar: React.FC = () => {
 
             {/* User Profile Card Summary */}
             <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-3.5 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shrink-0">
+              <div className="h-10 w-10 rounded-xl bg-linear-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shrink-0">
                 {user.name.charAt(0)}
               </div>
               <div className="overflow-hidden">
-                <h4 className="text-sm font-semibold text-white truncate">{user.name}</h4>
+                <h4 className="text-sm font-semibold text-white truncate">
+                  {user.name}
+                </h4>
                 <span className="text-[11px] text-indigo-400 font-medium capitalize">
-                  {user.role[0]} Portal
+                  {user.role[0]} {t("portal")}
                 </span>
               </div>
             </div>
@@ -115,7 +159,9 @@ export const Sidebar: React.FC = () => {
                         : "text-slate-400 hover:text-slate-100 hover:bg-slate-900/60"
                     }`}
                   >
-                    <Icon className={`w-4 h-4 ${isActive ? "text-indigo-400" : "text-slate-500"}`} />
+                    <Icon
+                      className={`w-4 h-4 ${isActive ? "text-indigo-400" : "text-slate-500"}`}
+                    />
                     <span>{item.label}</span>
                   </Link>
                 );
@@ -124,13 +170,13 @@ export const Sidebar: React.FC = () => {
           </div>
 
           {/* Bottom Card */}
-          <div className="rounded-2xl bg-gradient-to-br from-indigo-950/40 via-purple-950/30 to-slate-900 border border-indigo-500/20 p-4">
+          <div className="rounded-2xl bg-linear-to-br from-indigo-950/40 via-purple-950/30 to-slate-900 border border-indigo-500/20 p-4">
             <div className="flex items-center gap-2 text-indigo-400 text-xs font-semibold mb-1">
               <Award className="w-4 h-4" />
-              <span>EduSphere LMS</span>
+              <span>{t("eduSphereLms")}</span>
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              Production-Ready Course Platform v1.0
+              {t("platformVersion")}
             </p>
           </div>
         </div>

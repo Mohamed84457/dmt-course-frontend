@@ -5,20 +5,29 @@ import Link from "next/link";
 import { Course } from "@/types";
 import { getImageUrl, formatCurrency } from "@/lib/utils";
 import { Badge } from "../ui/Badge";
-import { Clock, BookOpen, Star, UserCheck } from "lucide-react";
+import { UserCheck } from "lucide-react";
+import { useAppPreferences } from "@/components/providers/AppPreferences";
 
 interface CourseCardProps {
   course: Course;
   progressPercentage?: number;
 }
 
-export const CourseCard: React.FC<CourseCardProps> = ({ course, progressPercentage }) => {
+export const CourseCard: React.FC<CourseCardProps> = ({
+  course,
+  progressPercentage,
+}) => {
+  const { t } = useAppPreferences();
   const categoryName =
-    typeof course.category === "object" ? course.category?.name : "General";
-  
-  const teacherObj = typeof course.teacherId === "object" ? (course.teacherId as any) : null;
-  const userObj = teacherObj && typeof teacherObj.userId === "object" ? teacherObj.userId : null;
-  const teacherName = userObj?.name || teacherObj?.name || "Instructor";
+    typeof course.category === "object" ? course.category?.name : t("general");
+
+  const teacherObj =
+    typeof course.teacherId === "object" ? (course.teacherId as any) : null;
+  const userObj =
+    teacherObj && typeof teacherObj.userId === "object"
+      ? teacherObj.userId
+      : null;
+  const teacherName = userObj?.name || teacherObj?.name || t("instructor");
 
   const imageSrc = course.image || course.thumbnail;
 
@@ -35,7 +44,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, progressPercenta
               "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=60";
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
+        <div className="absolute inset-0 bg-linear-to-t from-slate-950 via-transparent to-transparent opacity-80" />
 
         {/* Top Badges */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
@@ -43,7 +52,11 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, progressPercenta
             {categoryName}
           </Badge>
           {course.level && (
-            <Badge variant="secondary" size="sm" className="capitalize backdrop-blur-md">
+            <Badge
+              variant="secondary"
+              size="sm"
+              className="capitalize backdrop-blur-md"
+            >
               {course.level}
             </Badge>
           )}
@@ -72,12 +85,14 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, progressPercenta
           {progressPercentage !== undefined ? (
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-400">Progress</span>
-                <span className="text-indigo-400">{Math.round(progressPercentage)}%</span>
+                <span className="text-slate-400">{t("progress")}</span>
+                <span className="text-indigo-400">
+                  {Math.round(progressPercentage)}%
+                </span>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
                 <div
-                  className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500"
+                  className="h-full bg-linear-to-r from-indigo-500 to-purple-500 transition-all duration-500"
                   style={{ width: `${progressPercentage}%` }}
                 />
               </div>
@@ -85,9 +100,13 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, progressPercenta
           ) : (
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-xs text-slate-500 block">Course Fee</span>
+                <span className="text-xs text-slate-500 block">
+                  {t("courseFee")}
+                </span>
                 <span className="text-lg font-bold text-white">
-                  {course.price === 0 ? "Free" : formatCurrency(course.price)}
+                  {course.price === 0
+                    ? t("free")
+                    : formatCurrency(course.price)}
                 </span>
               </div>
 
@@ -95,7 +114,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, progressPercenta
                 href={`/courses/${course._id}`}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600/10 border border-indigo-500/20 px-3.5 py-2 text-xs font-semibold text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
               >
-                <span>View Details</span>
+                <span>{t("viewDetails")}</span>
               </Link>
             </div>
           )}

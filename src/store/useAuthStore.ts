@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { User } from "@/types";
+import { RegistrationData, User } from "@/types";
 import { api } from "@/lib/api";
 
 interface AuthState {
@@ -8,7 +8,9 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<User | null>;
-  register: (data: any) => Promise<any>;
+  register: (data: RegistrationData) => Promise<any>;
+  forgotPassword: (email: string) => Promise<any>;
+  resetPassword: (resetToken: string, newPassword: string) => Promise<any>;
   verifyEmail: (token: string) => Promise<any>;
   logout: () => Promise<void>;
   fetchMe: () => Promise<User | null>;
@@ -33,7 +35,11 @@ const getInitialToken = (): string | null => {
 };
 
 const isUserObject = (obj: any): boolean => {
-  return !!(obj && typeof obj === "object" && (obj.email || obj._id || obj.id || obj.role || obj.name));
+  return !!(
+    obj &&
+    typeof obj === "object" &&
+    (obj.email || obj._id || obj.id || obj.role || obj.name)
+  );
 };
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -91,7 +97,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // If user object wasn't in login payload, fetch profile immediately
       if (!user) {
-        user = await get().fetchMe();
+        user ??= await get().fetchMe();
       }
 
       return user;
@@ -113,6 +119,31 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  forgotPassword: async (email) => {
+    try {
+      const res = await api.post("/auth/forgot-password", { email });
+      return res.data;
+    } catch (err: any) {
+      throw new Error(
+        err.response?.data?.message || "Could not request password reset",
+      );
+    }
+  },
+
+  resetPassword: async (resetToken, newPassword) => {
+    try {
+      const res = await api.post("/auth/reset-password", {
+        resetToken,
+        newPassword,
+      });
+      return res.data;
+    } catch (err: any) {
+      throw new Error(
+        err.response?.data?.message || "Invalid or expired reset token",
+      );
+    }
+  },
+
   verifyEmail: async (token: string) => {
     set({ isLoading: true });
     try {
@@ -121,7 +152,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return res.data;
     } catch (err: any) {
       set({ isLoading: false });
-      throw new Error(err.response?.data?.message || "Email verification failed or link has expired");
+      throw new Error(
+        err.response?.data?.message ||
+          "Email verification failed or link has expired",
+      );
     }
   },
 
@@ -136,14 +170,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("user");
       }
-      set({ user: null, token: null, isAuthenticated: false, isLoading: false });
+      set({
+        user: null,
+        token: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
     }
   },
 
   fetchMe: async () => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("accessToken")
+        : null;
     if (!token || token === "undefined" || token === "null") {
-      set({ user: null, token: null, isAuthenticated: false, isLoading: false });
+      set({
+        user: null,
+        token: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
       return null;
     }
 
@@ -168,15 +215,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       }
 
-      set({ user: fetchedUser, token: token || (fetchedUser as any)?.accessToken || null, isAuthenticated: true, isLoading: false });
+      set({
+        user: fetchedUser,
+        token: token || (fetchedUser as any)?.accessToken || null,
+        isAuthenticated: true,
+        isLoading: false,
+      });
       return fetchedUser;
     } catch (err) {
+      // A failed profile request invalidates the local session and is handled by the caller.
       if (typeof window !== "undefined") {
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("user");
       }
-      set({ user: null, token: null, isAuthenticated: false, isLoading: false });
+      set({
+        user: null,
+        token: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
       return null;
     }
   },
@@ -188,7 +246,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const updatedUser = res.data?.user || res.data?.data;
     if (updatedUser) {
       set((state) => {
-        const newUser = state.user ? { ...state.user, ...updatedUser } : updatedUser;
+        const newUser = state.user
+          ? { ...state.user, ...updatedUser }
+          : updatedUser;
         if (typeof window !== "undefined") {
           localStorage.setItem("user", JSON.stringify(newUser));
         }

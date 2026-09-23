@@ -7,12 +7,19 @@ import { Button } from "@/components/ui/Button";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useUIStore } from "@/store/useUIStore";
-import { Building2, KeyRound, CheckCircle2, ShieldCheck, ArrowRight } from "lucide-react";
+import { Organization } from "@/types";
+import {
+  Building2,
+  KeyRound,
+  CheckCircle2,
+  ShieldCheck,
+  ArrowRight,
+} from "lucide-react";
 
 interface JoinOrganizationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onJoined?: (org: any) => void;
+  onJoined?: (org: Organization) => void;
 }
 
 export const JoinOrganizationModal: React.FC<JoinOrganizationModalProps> = ({
@@ -25,9 +32,9 @@ export const JoinOrganizationModal: React.FC<JoinOrganizationModalProps> = ({
   const [joinCode, setJoinCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successData, setSuccessData] = useState<any | null>(null);
+  const [successData, setSuccessData] = useState<Organization | null>(null);
 
-  const handleJoin = async (e: React.FormEvent) => {
+  const handleJoin = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     const cleanCode = joinCode.trim().toUpperCase();
     if (!cleanCode) {
@@ -41,12 +48,21 @@ export const JoinOrganizationModal: React.FC<JoinOrganizationModalProps> = ({
     try {
       const res = await api.post("/organization/join", { joinCode: cleanCode });
       const orgInfo = res.data?.organization || res.data?.data || res.data;
+      if (
+        !orgInfo ||
+        typeof orgInfo !== "object" ||
+        !orgInfo._id ||
+        !orgInfo.name
+      ) {
+        throw new Error("The organization response was incomplete.");
+      }
       setSuccessData(orgInfo);
-      
+
       addToast({
         type: "success",
         title: "Organization Joined!",
-        message: res.data?.message || "You have successfully joined the organization.",
+        message:
+          res.data?.message || "You have successfully joined the organization.",
       });
 
       // Refresh current user data in store so organizationId is updated
@@ -56,7 +72,9 @@ export const JoinOrganizationModal: React.FC<JoinOrganizationModalProps> = ({
         onJoined(orgInfo);
       }
     } catch (err: any) {
-      const msg = err.response?.data?.message || "Failed to join organization. Please check the code.";
+      const msg =
+        err.response?.data?.message ||
+        "Failed to join organization. Please check the code.";
       setError(msg);
       addToast({
         type: "error",
@@ -101,7 +119,8 @@ export const JoinOrganizationModal: React.FC<JoinOrganizationModalProps> = ({
               {successData?.name || "Partner Organization"}
             </h3>
             <p className="text-xs text-slate-400 max-w-xs mx-auto">
-              You now have access to exclusive courses, study groups, and institutional modules.
+              You now have access to exclusive courses, study groups, and
+              institutional modules.
             </p>
           </div>
 
@@ -122,7 +141,9 @@ export const JoinOrganizationModal: React.FC<JoinOrganizationModalProps> = ({
                 <Building2 className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-xs font-semibold text-slate-200">Organization Join Code</h4>
+                <h4 className="text-xs font-semibold text-slate-200">
+                  Organization Join Code
+                </h4>
                 <p className="text-[11px] text-slate-400">
                   Ask your instructor or administrator for the join code.
                 </p>

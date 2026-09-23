@@ -6,21 +6,17 @@ import { useCourseStore } from "@/store/useCourseStore";
 import { CourseCard } from "@/components/courses/CourseCard";
 import { Button } from "@/components/ui/Button";
 import {
-  GraduationCap,
   Sparkles,
   ArrowRight,
   BookOpen,
-  Users,
-  Award,
   ShieldCheck,
-  CheckCircle2,
-  TrendingUp,
   Globe,
   Zap,
 } from "lucide-react";
 
 export default function HomePage() {
-  const { courses, categories, fetchCourses, fetchCategories } = useCourseStore();
+  const { courses, categories, fetchCourses, fetchCategories } =
+    useCourseStore();
 
   useEffect(() => {
     fetchCourses();
@@ -32,7 +28,7 @@ export default function HomePage() {
   return (
     <div className="relative overflow-hidden bg-slate-950 text-slate-100">
       {/* Background Decorative Glow Effect */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] bg-gradient-to-b from-indigo-600/20 via-purple-600/10 to-transparent blur-3xl pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-150 bg-linear-to-b from-indigo-600/20 via-purple-600/10 to-transparent blur-3xl pointer-events-none" />
 
       {/* Hero Section */}
       <section className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-20 pb-16 text-center lg:pt-28 lg:pb-24">
@@ -43,13 +39,14 @@ export default function HomePage() {
 
         <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-6xl lg:text-7xl max-w-4xl mx-auto leading-[1.15]">
           Master Future-Proof Skills with{" "}
-          <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+          <span className="bg-linear-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
             World-Class Courses
           </span>
         </h1>
 
         <p className="mt-6 text-base sm:text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
-          Accelerate your career through interactive lessons, real-world assignments, live quizzes, and industry-recognized certifications.
+          Accelerate your career through interactive lessons, real-world
+          assignments, live quizzes, and industry-recognized certifications.
         </p>
 
         <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
@@ -64,7 +61,11 @@ export default function HomePage() {
             </Button>
           </Link>
           <Link href="/register">
-            <Button variant="outline" size="lg" icon={<ArrowRight className="w-5 h-5" />}>
+            <Button
+              variant="outline"
+              size="lg"
+              icon={<ArrowRight className="w-5 h-5" />}
+            >
               Start Free Trial
             </Button>
           </Link>
@@ -73,20 +74,36 @@ export default function HomePage() {
         {/* Stats Strip */}
         <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto p-6 rounded-3xl bg-slate-900/60 border border-slate-800 backdrop-blur-md shadow-2xl">
           <div className="text-center p-3">
-            <div className="text-2xl sm:text-3xl font-bold text-white">10K+</div>
-            <div className="text-xs text-slate-400 mt-1 font-medium">Active Students</div>
+            <div className="text-2xl sm:text-3xl font-bold text-white">
+              10K+
+            </div>
+            <div className="text-xs text-slate-400 mt-1 font-medium">
+              Active Students
+            </div>
           </div>
           <div className="text-center p-3 border-l border-slate-800">
-            <div className="text-2xl sm:text-3xl font-bold text-indigo-400">250+</div>
-            <div className="text-xs text-slate-400 mt-1 font-medium">Expert Courses</div>
+            <div className="text-2xl sm:text-3xl font-bold text-indigo-400">
+              250+
+            </div>
+            <div className="text-xs text-slate-400 mt-1 font-medium">
+              Expert Courses
+            </div>
           </div>
           <div className="text-center p-3 border-l border-slate-800">
-            <div className="text-2xl sm:text-3xl font-bold text-purple-400">99.8%</div>
-            <div className="text-xs text-slate-400 mt-1 font-medium">Satisfaction Rate</div>
+            <div className="text-2xl sm:text-3xl font-bold text-purple-400">
+              99.8%
+            </div>
+            <div className="text-xs text-slate-400 mt-1 font-medium">
+              Satisfaction Rate
+            </div>
           </div>
           <div className="text-center p-3 border-l border-slate-800">
-            <div className="text-2xl sm:text-3xl font-bold text-emerald-400">50+</div>
-            <div className="text-xs text-slate-400 mt-1 font-medium">Partner Organizations</div>
+            <div className="text-2xl sm:text-3xl font-bold text-emerald-400">
+              50+
+            </div>
+            <div className="text-xs text-slate-400 mt-1 font-medium">
+              Partner Organizations
+            </div>
           </div>
         </div>
       </section>
@@ -98,7 +115,9 @@ export default function HomePage() {
             <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">
               Curated Curriculum
             </span>
-            <h2 className="text-3xl font-extrabold text-white mt-1">Featured Courses</h2>
+            <h2 className="text-3xl font-extrabold text-white mt-1">
+              Featured Courses
+            </h2>
           </div>
           <Link
             href="/courses"
@@ -133,9 +152,12 @@ export default function HomePage() {
           <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">
             Browse Domains
           </span>
-          <h2 className="text-3xl font-extrabold text-white mt-1">Explore By Category</h2>
+          <h2 className="text-3xl font-extrabold text-white mt-1">
+            Explore By Category
+          </h2>
           <p className="text-sm text-slate-400 mt-2">
-            Find the perfect learning pathway tailored to your professional goals.
+            Find the perfect learning pathway tailored to your professional
+            goals.
           </p>
         </div>
 
@@ -146,7 +168,7 @@ export default function HomePage() {
               href={`/courses?category=${cat._id}`}
               className="group p-5 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 hover:bg-slate-900 transition-all text-center flex flex-col items-center"
             >
-              <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-3 group-hover:scale-110 transition-transform">
+              <div className="h-12 w-12 rounded-2xl bg-linear-to-tr from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-3 group-hover:scale-110 transition-transform">
                 <BookOpen className="w-6 h-6" />
               </div>
               <h4 className="text-sm font-bold text-white group-hover:text-indigo-400 transition-colors">
@@ -165,9 +187,12 @@ export default function HomePage() {
               <Zap className="w-6 h-6" />
             </div>
             <div className="mt-8">
-              <h3 className="text-xl font-bold text-white">Interactive Classroom</h3>
+              <h3 className="text-xl font-bold text-white">
+                Interactive Classroom
+              </h3>
               <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-                Seamlessly transition between video lectures, automated quizzes, and instructor-graded code assignments.
+                Seamlessly transition between video lectures, automated quizzes,
+                and instructor-graded code assignments.
               </p>
             </div>
           </div>
@@ -177,9 +202,12 @@ export default function HomePage() {
               <Globe className="w-6 h-6" />
             </div>
             <div className="mt-8">
-              <h3 className="text-xl font-bold text-white">Multi-Organization Ecosystem</h3>
+              <h3 className="text-xl font-bold text-white">
+                Multi-Organization Ecosystem
+              </h3>
               <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-                Connect with leading university partners, corporate training hubs, and specialized academies.
+                Connect with leading university partners, corporate training
+                hubs, and specialized academies.
               </p>
             </div>
           </div>
@@ -189,9 +217,12 @@ export default function HomePage() {
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div className="mt-8">
-              <h3 className="text-xl font-bold text-white">Verified Qualifications</h3>
+              <h3 className="text-xl font-bold text-white">
+                Verified Qualifications
+              </h3>
               <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-                Earn verifiable certificates upon completing course modules and achieving passing quiz scores.
+                Earn verifiable certificates upon completing course modules and
+                achieving passing quiz scores.
               </p>
             </div>
           </div>
@@ -200,12 +231,13 @@ export default function HomePage() {
 
       {/* CTA Section */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-900 border border-indigo-500/30 p-10 md:p-16 text-center">
+        <div className="relative overflow-hidden rounded-3xl bg-linear-to-r from-indigo-900 via-indigo-950 to-slate-900 border border-indigo-500/30 p-10 md:p-16 text-center">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-white max-w-2xl mx-auto">
             Ready to Transform Your Learning Journey?
           </h2>
           <p className="mt-4 text-sm text-slate-300 max-w-lg mx-auto">
-            Join thousands of active students and instructors building the future of digital education today.
+            Join thousands of active students and instructors building the
+            future of digital education today.
           </p>
           <div className="mt-8 flex justify-center gap-4">
             <Link href="/register">

@@ -8,16 +8,35 @@ import { ToastContainer } from "@/components/ui/Toast";
 import { NotificationDrawer } from "@/components/layout/NotificationDrawer";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useNotificationStore } from "@/store/useNotificationStore";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { AppPreferences } from "@/components/providers/AppPreferences";
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const { user, fetchMe, isAuthenticated } = useAuthStore();
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  const { user, fetchMe, isAuthenticated, isLoading } = useAuthStore();
   const { fetchNotifications } = useNotificationStore();
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     fetchMe();
   }, [fetchMe]);
+
+  const isAuthPage =
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/register") ||
+    pathname.startsWith("/verify-email") ||
+    pathname.startsWith("/forgot-password") ||
+    pathname.startsWith("/reset-password");
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAuthenticated && !isAuthPage) router.replace("/login");
+    if (isAuthenticated && isAuthPage) router.replace("/dashboard/student");
+  }, [isAuthenticated, isAuthPage, isLoading, router]);
 
   useEffect(() => {
     if (isAuthenticated || user) {
@@ -26,15 +45,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   }, [isAuthenticated, user, fetchNotifications]);
 
   const isLearningRoom = pathname.startsWith("/learn/");
+  const showProtectedContent = isAuthenticated && !isLoading;
 
   return (
-    <html lang="en" className="dark">
+    <html lang="en" data-theme="dark">
       <body className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased flex flex-col selection:bg-indigo-500 selection:text-white">
-        {!isLearningRoom && <Navbar />}
-        <NotificationDrawer />
-        <ToastContainer />
-        <main className="flex-1">{children}</main>
-        {!isLearningRoom && <Footer />}
+        <AppPreferences>
+          {!isLearningRoom && showProtectedContent && <Navbar />}
+          {showProtectedContent && <NotificationDrawer />}
+          <ToastContainer />
+          <main className="flex-1">
+            {isAuthPage || showProtectedContent ? children : null}
+          </main>
+          {!isLearningRoom && showProtectedContent && <Footer />}
+        </AppPreferences>
       </body>
     </html>
   );

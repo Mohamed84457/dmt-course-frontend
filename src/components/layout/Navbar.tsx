@@ -17,24 +17,25 @@ import {
   LayoutDashboard,
   Menu,
   X,
-  BookOpen,
-  Building2,
   ChevronDown,
 } from "lucide-react";
 import { Button } from "../ui/Button";
+import { PreferenceControls } from "./PreferenceControls";
+import { useAppPreferences } from "@/components/providers/AppPreferences";
 
 export const Navbar: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuthStore();
   const { unreadCount } = useNotificationStore();
-  const { toggleNotificationDrawer, toggleSidebar } = useUIStore();
+  const { toggleNotificationDrawer } = useUIStore();
   const { searchQuery, setSearchQuery } = useCourseStore();
+  const { t } = useAppPreferences();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  const handleSearchSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/courses?search=${encodeURIComponent(searchQuery)}`);
@@ -43,8 +44,10 @@ export const Navbar: React.FC = () => {
 
   const getDashboardPath = () => {
     if (!user) return "/login";
-    if (hasAnyRole(user.role, ["owner", "admin", "manager"])) return "/dashboard/admin";
-    if (hasAnyRole(user.role, ["teacher", "instructor"])) return "/dashboard/teacher";
+    if (hasAnyRole(user.role, ["owner", "admin", "manager"]))
+      return "/dashboard/admin";
+    if (hasAnyRole(user.role, ["teacher", "instructor"]))
+      return "/dashboard/teacher";
     return "/dashboard/student";
   };
 
@@ -55,15 +58,20 @@ export const Navbar: React.FC = () => {
         <div className="flex items-center gap-3">
           {isAuthenticated && (
             <button
-              onClick={toggleSidebar}
+              onClick={() => setMobileMenuOpen((open) => !open)}
+              aria-label={mobileMenuOpen ? t("closeMenu") : t("openMenu")}
               className="lg:hidden p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
             >
-              <Menu className="w-5 h-5" />
+              {mobileMenuOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
             </button>
           )}
 
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 text-white shadow-lg shadow-indigo-500/25 transition-transform group-hover:scale-105">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-tr from-indigo-600 via-indigo-500 to-purple-500 text-white shadow-lg shadow-indigo-500/25 transition-transform group-hover:scale-105">
               <GraduationCap className="h-6 w-6" />
             </div>
             <span className="text-lg font-bold tracking-tight text-white font-sans">
@@ -77,7 +85,7 @@ export const Navbar: React.FC = () => {
           <form onSubmit={handleSearchSubmit} className="w-full relative">
             <input
               type="text"
-              placeholder="Search courses, skills, topics..."
+              placeholder={t("searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-slate-900/90 border border-slate-800 text-slate-100 placeholder-slate-500 text-sm rounded-xl pl-9 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
@@ -89,31 +97,36 @@ export const Navbar: React.FC = () => {
             <Link
               href="/courses"
               className={`hover:text-indigo-400 transition-colors ${
-                pathname.startsWith("/courses") ? "text-indigo-400 font-semibold" : ""
+                pathname.startsWith("/courses")
+                  ? "text-indigo-400 font-semibold"
+                  : ""
               }`}
             >
-              Courses
+              {t("courses")}
             </Link>
             <Link
               href="/organizations"
               className={`hover:text-indigo-400 transition-colors ${
-                pathname.startsWith("/organizations") ? "text-indigo-400 font-semibold" : ""
+                pathname.startsWith("/organizations")
+                  ? "text-indigo-400 font-semibold"
+                  : ""
               }`}
             >
-              Organizations
+              {t("organizations")}
             </Link>
           </nav>
         </div>
 
         {/* Right: Actions / Auth / Profile */}
         <div className="flex items-center gap-3">
+          <PreferenceControls />
           {isAuthenticated ? (
             <>
               {/* Notifications Bell */}
               <button
                 onClick={toggleNotificationDrawer}
                 className="relative p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                aria-label="Notifications"
+                aria-label={t("notifications")}
               >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (
@@ -125,8 +138,12 @@ export const Navbar: React.FC = () => {
 
               {/* Dashboard Quick Link */}
               <Link href={getDashboardPath()} className="hidden sm:block">
-                <Button variant="outline" size="sm" icon={<LayoutDashboard className="w-4 h-4" />}>
-                  Dashboard
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={<LayoutDashboard className="w-4 h-4" />}
+                >
+                  {t("dashboard")}
                 </Button>
               </Link>
 
@@ -138,7 +155,7 @@ export const Navbar: React.FC = () => {
                 >
                   <img
                     src={getImageUrl(user?.profileImage)}
-                    alt={user?.name || "User"}
+                    alt={user?.name || t("user")}
                     className="h-8 w-8 rounded-lg object-cover bg-slate-800 border border-slate-700"
                     onError={(e) => {
                       (e.target as HTMLElement).style.display = "none";
@@ -151,13 +168,14 @@ export const Navbar: React.FC = () => {
                 </button>
 
                 {dropdownOpen && (
-                  <div
-                    className="absolute right-0 mt-2 w-56 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150 text-slate-200"
-                    onClick={() => setDropdownOpen(false)}
-                  >
+                  <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150 text-slate-200">
                     <div className="px-4 py-2.5 border-b border-slate-800">
-                      <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
-                      <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+                      <p className="text-sm font-semibold text-white truncate">
+                        {user?.name}
+                      </p>
+                      <p className="text-xs text-slate-400 truncate">
+                        {user?.email}
+                      </p>
                       <div className="mt-1 flex flex-wrap gap-1">
                         {user?.role?.map((r) => (
                           <span
@@ -175,7 +193,7 @@ export const Navbar: React.FC = () => {
                       className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
                     >
                       <LayoutDashboard className="w-4 h-4 text-indigo-400" />
-                      Dashboard
+                      {t("dashboard")}
                     </Link>
 
                     <Link
@@ -183,7 +201,7 @@ export const Navbar: React.FC = () => {
                       className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
                     >
                       <UserIcon className="w-4 h-4 text-purple-400" />
-                      My Profile
+                      {t("myProfile")}
                     </Link>
 
                     <div className="border-t border-slate-800 my-1" />
@@ -193,7 +211,7 @@ export const Navbar: React.FC = () => {
                       className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-rose-400 hover:bg-rose-500/10 transition-colors"
                     >
                       <LogOut className="w-4 h-4" />
-                      Sign Out
+                      {t("signOut")}
                     </button>
                   </div>
                 )}
@@ -203,18 +221,57 @@ export const Navbar: React.FC = () => {
             <div className="flex items-center gap-2.5">
               <Link href="/login">
                 <Button variant="ghost" size="sm">
-                  Sign In
+                  {t("signIn")}
                 </Button>
               </Link>
               <Link href="/register">
                 <Button variant="primary" size="sm">
-                  Get Started
+                  {t("getStarted")}
                 </Button>
               </Link>
             </div>
           )}
         </div>
       </div>
+      {mobileMenuOpen && (
+        <div className="border-t border-slate-800 bg-slate-950 px-4 py-4 md:hidden">
+          <form onSubmit={handleSearchSubmit} className="relative mb-4">
+            <input
+              type="text"
+              placeholder={t("searchPlaceholder")}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 pl-10 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+            />
+            <Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
+          </form>
+          <nav className="flex flex-col gap-1 text-sm font-medium text-slate-300">
+            <Link
+              href="/courses"
+              onClick={() => setMobileMenuOpen(false)}
+              className="rounded-lg px-3 py-3 hover:bg-slate-800"
+            >
+              {t("courses")}
+            </Link>
+            <Link
+              href="/organizations"
+              onClick={() => setMobileMenuOpen(false)}
+              className="rounded-lg px-3 py-3 hover:bg-slate-800"
+            >
+              {t("organizations")}
+            </Link>
+            {isAuthenticated && (
+              <Link
+                href={getDashboardPath()}
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-lg px-3 py-3 hover:bg-slate-800"
+              >
+                {t("dashboard")}
+              </Link>
+            )}
+          </nav>
+        </div>
+      )}
     </header>
   );
 };

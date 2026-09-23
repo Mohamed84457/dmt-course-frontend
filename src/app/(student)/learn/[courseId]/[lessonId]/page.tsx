@@ -1,30 +1,30 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useCourseStore } from "@/store/useCourseStore";
-import { Lesson, Quiz, Assignment, AssignmentSubmission, QuizSubmission } from "@/types";
+import {
+  Lesson,
+  Quiz,
+  Assignment,
+  AssignmentSubmission,
+  QuizSubmission,
+} from "@/types";
 import { api } from "@/lib/api";
 import { QuizPlayer } from "@/components/courses/QuizPlayer";
 import { AssignmentSubmissionModal } from "@/components/courses/AssignmentSubmissionModal";
+import { useAppPreferences } from "@/components/providers/AppPreferences";
 import { Button } from "@/components/ui/Button";
 import {
-  GraduationCap,
-  PlayCircle,
   FileText,
   HelpCircle,
   ArrowLeft,
-  ChevronRight,
-  CheckCircle2,
-  Clock,
   Upload,
   Menu,
   X,
   ExternalLink,
   Globe,
-  Award,
-  BookOpen,
   MessageSquare,
 } from "lucide-react";
 
@@ -45,34 +45,70 @@ const isVideoUrl = (url: string) => {
 
 export default function InteractiveClassroomPage() {
   const params = useParams();
-  const router = useRouter();
+  const { t } = useAppPreferences();
   const courseId = params.courseId as string;
   const currentLessonId = params.lessonId as string;
 
-  const { fetchCourseById, fetchCourseLessons, activeCourse, activeLessons } = useCourseStore();
+  const { fetchCourseById, fetchCourseLessons, activeCourse, activeLessons } =
+    useCourseStore();
 
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [assignmentSubmissions, setAssignmentSubmissions] = useState<Record<string, AssignmentSubmission>>({});
-  const [quizSubmissions, setQuizSubmissions] = useState<Record<string, QuizSubmission>>({});
+  const [assignmentSubmissions, setAssignmentSubmissions] = useState<
+    Record<string, AssignmentSubmission>
+  >({});
+  const [quizSubmissions, setQuizSubmissions] = useState<
+    Record<string, QuizSubmission>
+  >({});
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isLoadingClassroom, setIsLoadingClassroom] = useState(true);
+  const [classroomError, setClassroomError] = useState<string | null>(null);
 
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
-  const [activeAssignment, setActiveAssignment] = useState<Assignment | null>(null);
+  const [activeAssignment, setActiveAssignment] = useState<Assignment | null>(
+    null,
+  );
   const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
 
   useEffect(() => {
-    if (courseId) {
-      fetchCourseById(courseId);
-      fetchCourseLessons(courseId).then((lessons) => {
-        if (lessons.length > 0) {
-          const match =
-            lessons.find((l) => l._id === currentLessonId) || lessons[0];
-          setCurrentLesson(match);
+    let isMounted = true;
+
+    const loadClassroom = async () => {
+      if (!courseId) return;
+      setIsLoadingClassroom(true);
+      setClassroomError(null);
+      try {
+        const [, lessons] = await Promise.all([
+          fetchCourseById(courseId),
+          fetchCourseLessons(courseId),
+        ]);
+        if (!lessons.length) {
+          throw new Error("No lessons are available for this course yet.");
         }
-      });
-    }
+        if (isMounted) {
+          setCurrentLesson(
+            lessons.find((lesson) => lesson._id === currentLessonId) ||
+              lessons[0],
+          );
+        }
+      } catch (error) {
+        if (isMounted) {
+          setClassroomError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load this classroom.",
+          );
+        }
+      } finally {
+        if (isMounted) setIsLoadingClassroom(false);
+      }
+    };
+
+    loadClassroom();
+    return () => {
+      isMounted = false;
+    };
   }, [courseId, currentLessonId, fetchCourseById, fetchCourseLessons]);
 
   const loadLessonAssessments = useCallback(async () => {
@@ -80,14 +116,22 @@ export default function InteractiveClassroomPage() {
 
     try {
       const [quizRes, assignRes] = await Promise.all([
-        api.get(`/quiz/lesson/${currentLesson._id}`).catch(() => ({ data: [] })),
-        api.get(`/assignments/lesson/${currentLesson._id}`).catch(() => ({ data: [] })),
+        api
+          .get(`/quiz/lesson/${currentLesson._id}`)
+          .catch(() => ({ data: [] })),
+        api
+          .get(`/assignments/lesson/${currentLesson._id}`)
+          .catch(() => ({ data: [] })),
       ]);
 
       const qList: Quiz[] =
-        quizRes.data?.quizzes || quizRes.data?.data || (Array.isArray(quizRes.data) ? quizRes.data : []);
+        quizRes.data?.quizzes ||
+        quizRes.data?.data ||
+        (Array.isArray(quizRes.data) ? quizRes.data : []);
       const aList: Assignment[] =
-        assignRes.data?.assignments || assignRes.data?.data || (Array.isArray(assignRes.data) ? assignRes.data : []);
+        assignRes.data?.assignments ||
+        assignRes.data?.data ||
+        (Array.isArray(assignRes.data) ? assignRes.data : []);
 
       setQuizzes(qList);
       setAssignments(aList);
@@ -97,12 +141,16 @@ export default function InteractiveClassroomPage() {
       await Promise.all(
         aList.map(async (assign) => {
           try {
-            const sRes = await api.get(`/submission-assignment/my/${assign._id}`).catch(() => null);
+            const sRes = await api
+              .get(`/submission-assignment/my/${assign._id}`)
+              .catch(() => null);
             if (sRes?.data?.submission) {
               subMap[assign._id] = sRes.data.submission;
             }
-          } catch (e) {}
-        })
+          } catch {
+            // A missing submission means the student has not submitted this item yet.
+          }
+        }),
       );
       setAssignmentSubmissions(subMap);
 
@@ -111,12 +159,16 @@ export default function InteractiveClassroomPage() {
       await Promise.all(
         qList.map(async (quiz) => {
           try {
-            const qsRes = await api.get(`/quiz-submissions/my/${quiz._id}`).catch(() => null);
+            const qsRes = await api
+              .get(`/quiz-submissions/my/${quiz._id}`)
+              .catch(() => null);
             if (qsRes?.data?.submission) {
               qSubMap[quiz._id] = qsRes.data.submission;
             }
-          } catch (e) {}
-        })
+          } catch {
+            // A missing submission means the student has not submitted this item yet.
+          }
+        }),
       );
       setQuizSubmissions(qSubMap);
     } catch (err) {
@@ -128,10 +180,31 @@ export default function InteractiveClassroomPage() {
     loadLessonAssessments();
   }, [loadLessonAssessments]);
 
-  if (!activeCourse || !currentLesson) {
+  if (isLoadingClassroom) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-950 text-slate-100">
         <div className="h-12 w-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (classroomError || !activeCourse || !currentLesson) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 px-6 text-slate-100">
+        <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900 p-8 text-center shadow-2xl">
+          <h1 className="text-xl font-bold text-white">
+            Unable to open classroom
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-slate-400">
+            {classroomError || "This course has no available lessons yet."}
+          </p>
+          <Link
+            href="/dashboard/student"
+            className="mt-6 inline-flex rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white hover:bg-indigo-500"
+          >
+            Back to dashboard
+          </Link>
+        </div>
       </div>
     );
   }
@@ -153,9 +226,9 @@ export default function InteractiveClassroomPage() {
             className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Dashboard</span>
+            <span>{t("dashboard")}</span>
           </Link>
-          <span className="text-xs font-bold text-indigo-400 truncate max-w-[150px]">
+          <span className="text-xs font-bold text-indigo-400 truncate max-w-37.5">
             {activeCourse.title}
           </span>
         </div>
@@ -163,7 +236,7 @@ export default function InteractiveClassroomPage() {
         {/* Lessons List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-2">
-            Module Syllabus ({activeLessons.length})
+            {t("courseCurriculum")} ({activeLessons.length})
           </span>
 
           {activeLessons.map((l, idx) => {
@@ -184,14 +257,18 @@ export default function InteractiveClassroomPage() {
               >
                 <div
                   className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 font-bold ${
-                    isActive ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400"
+                    isActive
+                      ? "bg-indigo-600 text-white"
+                      : "bg-slate-800 text-slate-400"
                   }`}
                 >
                   {idx + 1}
                 </div>
                 <div className="overflow-hidden flex-1">
                   <span className="block truncate">{l.title}</span>
-                  <span className="text-[10px] text-slate-500">Lesson {idx + 1}</span>
+                  <span className="text-[10px] text-slate-500">
+                    {t("lesson")} {idx + 1}
+                  </span>
                 </div>
               </button>
             );
@@ -208,7 +285,11 @@ export default function InteractiveClassroomPage() {
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
             >
-              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {sidebarOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
             </button>
             <h2 className="text-sm font-bold text-white truncate max-w-md">
               {currentLesson.title}
@@ -228,7 +309,7 @@ export default function InteractiveClassroomPage() {
                 }}
                 className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:underline mb-4"
               >
-                <ArrowLeft className="w-4 h-4" /> Back to Lesson Notes
+                <ArrowLeft className="w-4 h-4" /> {t("backToLessonNotes")}
               </button>
               <QuizPlayer quiz={activeQuiz} />
             </div>
@@ -238,7 +319,8 @@ export default function InteractiveClassroomPage() {
               {mediaUrl ? (
                 isVideo ? (
                   <div className="aspect-video w-full overflow-hidden rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl relative flex items-center justify-center">
-                    {mediaUrl.includes("youtube.com") || mediaUrl.includes("youtu.be") ? (
+                    {mediaUrl.includes("youtube.com") ||
+                    mediaUrl.includes("youtu.be") ? (
                       <iframe
                         src={mediaUrl
                           .replace("watch?v=", "embed/")
@@ -256,17 +338,17 @@ export default function InteractiveClassroomPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-indigo-950/40 via-purple-950/30 to-slate-900 border border-indigo-500/20 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                  <div className="p-6 sm:p-8 rounded-3xl bg-linear-to-br from-indigo-950/40 via-purple-950/30 to-slate-900 border border-indigo-500/20 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
                     <div className="flex items-start gap-4">
                       <div className="h-12 w-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center shrink-0">
                         <Globe className="w-6 h-6" />
                       </div>
                       <div className="space-y-1">
                         <h3 className="text-base font-bold text-white">
-                          External Learning Material & Resource
+                          {t("externalLearningMaterial")}
                         </h3>
                         <p className="text-xs text-slate-300">
-                          This lesson includes supplementary documentation, project repositories, or interactive study guides.
+                          {t("supplementaryMaterial")}
                         </p>
                         <p className="text-[11px] text-indigo-400 truncate max-w-lg pt-1">
                           {mediaUrl}
@@ -280,27 +362,31 @@ export default function InteractiveClassroomPage() {
                       rel="noreferrer"
                       className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors shadow-lg shadow-indigo-600/25 shrink-0"
                     >
-                      <ExternalLink className="w-4 h-4" /> Open Resource Link
+                      <ExternalLink className="w-4 h-4" /> {t("openResource")}
                     </a>
                   </div>
                 )
               ) : (
-                <div className="p-8 rounded-3xl bg-gradient-to-br from-indigo-950/40 via-purple-950/30 to-slate-900 border border-indigo-500/20 text-center">
+                <div className="p-8 rounded-3xl bg-linear-to-br from-indigo-950/40 via-purple-950/30 to-slate-900 border border-indigo-500/20 text-center">
                   <FileText className="w-12 h-12 text-indigo-400 mx-auto mb-3" />
-                  <h3 className="text-lg font-bold text-white">Interactive Reading Module</h3>
+                  <h3 className="text-lg font-bold text-white">
+                    {t("interactiveReading")}
+                  </h3>
                   <p className="text-xs text-slate-400 mt-1">
-                    Study the notes below and complete the module quizzes & assignments.
+                    {t("studyNotes")}
                   </p>
                 </div>
               )}
 
               {/* Lesson Text Notes */}
               <div className="rounded-3xl bg-slate-900 border border-slate-800 p-6 sm:p-8 space-y-4 shadow-xl">
-                <h3 className="text-xl font-bold text-white">{currentLesson.title}</h3>
+                <h3 className="text-xl font-bold text-white">
+                  {currentLesson.title}
+                </h3>
                 <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
                   {currentLesson.description ||
                     currentLesson.content ||
-                    "No text notes provided for this lesson module."}
+                    t("noLessonNotes")}
                 </div>
               </div>
 
@@ -310,11 +396,13 @@ export default function InteractiveClassroomPage() {
                 <div className="rounded-3xl bg-slate-900 border border-slate-800 p-6 space-y-4">
                   <div className="flex items-center gap-2 text-indigo-400">
                     <HelpCircle className="w-5 h-5" />
-                    <h4 className="text-base font-bold text-white">Lesson Quizzes</h4>
+                    <h4 className="text-base font-bold text-white">
+                      {t("lessonQuizzes")}
+                    </h4>
                   </div>
 
                   {quizzes.length === 0 ? (
-                    <p className="text-xs text-slate-400">No quizzes attached to this lesson.</p>
+                    <p className="text-xs text-slate-400">{t("noQuizzes")}</p>
                   ) : (
                     quizzes.map((quiz) => {
                       const studentQuizSub = quizSubmissions[quiz._id];
@@ -326,9 +414,12 @@ export default function InteractiveClassroomPage() {
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div>
-                              <h5 className="text-xs font-bold text-white">{quiz.title}</h5>
+                              <h5 className="text-xs font-bold text-white">
+                                {quiz.title}
+                              </h5>
                               <span className="text-[10px] text-slate-400">
-                                {quiz.questions?.length || 0} Questions • Pass: {quiz.passingMarks || 60}%
+                                {quiz.questions?.length || 0} {t("questions")} •{" "}
+                                {t("pass")}: {quiz.passingMarks || 60}%
                               </span>
                             </div>
 
@@ -340,7 +431,13 @@ export default function InteractiveClassroomPage() {
                                     : "bg-red-500/10 text-red-400 border-red-500/20"
                                 }`}
                               >
-                                {studentQuizSub.passed ? "Passed ✓" : "Failed ✗"} (Score: {studentQuizSub.totalScore || studentQuizSub.score})
+                                {studentQuizSub.passed
+                                  ? `${t("passed")} ✓`
+                                  : `${t("failed")} ✗`}{" "}
+                                ({t("score")}:{" "}
+                                {studentQuizSub.totalScore ||
+                                  studentQuizSub.score}
+                                )
                               </span>
                             )}
                           </div>
@@ -351,7 +448,7 @@ export default function InteractiveClassroomPage() {
                               size="sm"
                               onClick={() => setActiveQuiz(quiz)}
                             >
-                              {studentQuizSub ? "Retake Quiz" : "Take Quiz"}
+                              {studentQuizSub ? t("retakeQuiz") : t("takeQuiz")}
                             </Button>
                           </div>
                         </div>
@@ -364,11 +461,15 @@ export default function InteractiveClassroomPage() {
                 <div className="rounded-3xl bg-slate-900 border border-slate-800 p-6 space-y-4">
                   <div className="flex items-center gap-2 text-purple-400">
                     <Upload className="w-5 h-5" />
-                    <h4 className="text-base font-bold text-white">Lesson Assignments</h4>
+                    <h4 className="text-base font-bold text-white">
+                      {t("lessonAssignments")}
+                    </h4>
                   </div>
 
                   {assignments.length === 0 ? (
-                    <p className="text-xs text-slate-400">No assignments attached to this lesson.</p>
+                    <p className="text-xs text-slate-400">
+                      {t("noAssignments")}
+                    </p>
                   ) : (
                     assignments.map((assign) => {
                       const studentSub = assignmentSubmissions[assign._id];
@@ -380,9 +481,11 @@ export default function InteractiveClassroomPage() {
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div>
-                              <h5 className="text-xs font-bold text-white">{assign.title}</h5>
+                              <h5 className="text-xs font-bold text-white">
+                                {assign.title}
+                              </h5>
                               <span className="text-[10px] text-slate-400">
-                                Total Points: {assign.totalPoints}
+                                {t("totalPoints")}: {assign.totalPoints}
                               </span>
                             </div>
 
@@ -395,12 +498,12 @@ export default function InteractiveClassroomPage() {
                                 }`}
                               >
                                 {studentSub.status === "graded"
-                                  ? `Graded: ${studentSub.grade}/${assign.totalPoints}`
-                                  : "Submitted (Pending Review)"}
+                                  ? `${t("graded")}: ${studentSub.grade}/${assign.totalPoints}`
+                                  : t("submittedPending")}
                               </span>
                             ) : (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 text-slate-400">
-                                Not Submitted
+                                {t("notSubmitted")}
                               </span>
                             )}
                           </div>
@@ -409,7 +512,8 @@ export default function InteractiveClassroomPage() {
                           {studentSub?.feedback && (
                             <div className="p-3 rounded-xl bg-indigo-950/20 border border-indigo-500/30 text-xs space-y-1">
                               <span className="font-bold text-indigo-400 flex items-center gap-1.5 text-[11px]">
-                                <MessageSquare className="w-3.5 h-3.5" /> Instructor Feedback:
+                                <MessageSquare className="w-3.5 h-3.5" />{" "}
+                                {t("instructorFeedbackLabel")}:
                               </span>
                               <p className="text-slate-300 leading-relaxed italic">
                                 "{studentSub.feedback}"
@@ -426,7 +530,9 @@ export default function InteractiveClassroomPage() {
                                 setAssignmentModalOpen(true);
                               }}
                             >
-                              {studentSub ? "View / Update Submission" : "Submit Work"}
+                              {studentSub
+                                ? t("viewUpdateSubmission")
+                                : t("submitWork")}
                             </Button>
                           </div>
                         </div>
@@ -445,7 +551,9 @@ export default function InteractiveClassroomPage() {
           isOpen={assignmentModalOpen}
           onClose={() => setAssignmentModalOpen(false)}
           assignment={activeAssignment}
-          existingSubmission={assignmentSubmissions[activeAssignment._id] || null}
+          existingSubmission={
+            assignmentSubmissions[activeAssignment._id] || null
+          }
           onSuccess={loadLessonAssessments}
         />
       )}
